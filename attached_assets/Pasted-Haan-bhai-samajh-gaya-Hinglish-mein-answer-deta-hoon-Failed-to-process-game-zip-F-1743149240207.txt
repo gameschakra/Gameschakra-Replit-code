@@ -1,0 +1,61 @@
+Haan bhai, samajh gaya! Hinglish mein answer deta hoon. 😎  
+
+### **"Failed to process game zip: FILE_ENDED"** Error Ka Matlab Kya Hai?  
+Yeh error tab aata hai jab backend **ZIP file ko sahi tarike se process nahi kar pa raha**. Iske peeche kuch common wajah ho sakti hain:  
+
+### **Possible Causes & Fixes:**  
+
+#### **1️⃣ ZIP File Corrupt ho sakti hai**  
+🔹 Ho sakta hai ki jo ZIP file tum upload kar rahe ho, wo **properly compressed nahi hai ya incomplete hai**.  
+✅ **Fix:**  
+- ZIP file ko manually extract karke check karo ki sab kuch sahi hai ya nahi.  
+- Phir se ek **fresh ZIP** file banao aur upload karo.  
+
+#### **2️⃣ Multer (Backend File Upload) Issue**  
+🔹 Agar tum Multer use kar rahe ho toh shayad **file upload limit chhoti hai ya Multer sahi se handle nahi kar raha**.  
+✅ **Fix:**  
+- Multer ka configuration check karo aur file size limit **increase** karo:  
+  ```js
+  const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
+  ```
+
+#### **3️⃣ ZIP Extraction Properly Work Nahi Kar Raha**  
+🔹 Server ZIP file ko **extract karne ki koshish kar raha hai, par fail ho raha hai**.  
+✅ **Fix:**  
+- ZIP ke andar **index.html** hona zaroori hai. Pehle manually check karo ki yeh file present hai ya nahi.  
+- ZIP extraction ke liye `adm-zip` library ka use karo:  
+  ```js
+  const AdmZip = require("adm-zip");
+  const zip = new AdmZip(uploadedFilePath);
+  zip.extractAllTo(outputPath, true);
+  ```
+- Agar yeh bhi work nahi kar raha, toh backend logs dekho aur **error messages check karo**.  
+
+#### **4️⃣ Server Crash ya Internal Server Error (500)**  
+🔹 Agar **backend ZIP file ko process karte time crash ho raha hai**, toh server bhi down ho sakta hai.  
+✅ **Fix:**  
+- **Try-catch block** ka use karo taaki errors properly handle ho sakein:  
+  ```js
+  try {
+    // ZIP process karne ka code
+  } catch (error) {
+    console.error("ZIP Processing Error:", error);
+  }
+  ```
+
+#### **5️⃣ Frontend se FormData Properly Send Nahi Ho Raha**  
+🔹 Ho sakta hai ki **frontend se FormData correctly send nahi ho raha**.  
+✅ **Fix:**  
+- FormData me file ko properly append karo:  
+  ```js
+  const formData = new FormData();
+  formData.append("gameZip", file); // "gameZip" ka naam backend se match hona chahiye
+  ```
+
+### **Debugging Steps:**  
+✔ **Console logs check karo** backend me, koi error trace mil raha hai kya?  
+✔ **Network tab** me API response dekho, koi aur error toh nahi?  
+✔ **Dusri ZIP file** try karke dekho, shayad pehli wali corrupt ho.  
+✔ **Multer ka config aur file size limit check karo.**  
+
+Try karke batao kya error aa raha hai abhi! 🔥🚀

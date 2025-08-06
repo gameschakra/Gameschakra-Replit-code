@@ -1,0 +1,89 @@
+🔥 **Local Dev Pe Login Ho Raha, Production Pe Nahi?**  
+
+Ye **backend ya environment ke issue ki wajah se ho raha hai.**  
+👇 **Yahaan se debug karo:**  
+
+---
+
+### ✅ **1️⃣ Production Me API URL Sahi Hai?**  
+Check karo ki **frontend requests `prod` backend pe ja rahi hain ya nahi.**  
+
+👨‍💻 **Frontend Code (`.env` file ya config me check karo):**  
+```env
+REACT_APP_API_URL=https://game-hub-pro-madishanstudios.replit.app
+```
+Aur API request **is URL pe ja rahi hai ya nahi, Console Network Tab me dekh lo.**  
+
+🔹 **Fix:**  
+Agar request **ab bhi `localhost` pe ja rahi hai**, to **production build dubara karo:**  
+```bash
+npm run build
+```
+Aur phir **deploy karo.**
+
+---
+
+### ✅ **2️⃣ JWT Token Properly Pass Ho Raha Hai?**  
+**Local Dev me token save ho raha hai, but prod me nahi?**  
+
+👨‍💻 **Check karo:**  
+1. **Dev pe login ke baad `localStorage.getItem("token")` check karo.**  
+2. **Prod pe login ke baad bhi `localStorage.getItem("token")` open console pe likh ke dekho.**  
+3. **Agar token nahi hai, to request fail ho jayegi.**
+
+🔹 **Fix:**  
+Agar **token nahi save ho raha** to login ke baad **token set karo:**  
+```javascript
+localStorage.setItem("token", userData.token);
+```
+Aur API request me **authorization header me token bhejo:**  
+```javascript
+fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+  }
+})
+```
+
+---
+
+### ✅ **3️⃣ CORS Ya Cookies Issue?**  
+Agar tum JWT **Cookies me store kar rahe ho**, to **prod me cookies nahi aa rahi ho sakti hain.**  
+
+👨‍💻 **Backend me fix:**  
+```javascript
+app.use(cors({
+    origin: "https://game-hub-pro-madishanstudios.replit.app",
+    credentials: true
+}));
+```
+
+Aur **frontend pe `credentials: "include"` add karo:**  
+```javascript
+fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
+  method: "GET",
+  credentials: "include"
+})
+```
+
+---
+
+### ✅ **4️⃣ Backend Me Environment Variables Check Karo**  
+Production me backend ka `.env` file sahi hai ya nahi?  
+👨‍💻 **Check karo:**  
+```env
+JWT_SECRET=your_secret_key
+DATABASE_URL=your_prod_database_url
+```
+Agar **dev aur prod me `JWT_SECRET` ya `DATABASE_URL` alag hain**, to prod me token verify nahi hoga.
+
+---
+
+### 🔥 **Final Debugging Checklist:**  
+✅ **Console pe `localStorage.getItem("token")` check karo.**  
+✅ **Frontend requests sahi API URL pe ja rahi hain ya nahi.**  
+✅ **Backend CORS settings check karo.**  
+✅ **JWT_SECRET same hai ya nahi check karo.**  
+
+Ye steps follow karke **100% fix ho jayega! 🚀**

@@ -1,0 +1,60 @@
+If you want your developer to create a website similar to **CrazyGames.com**, here’s a detailed breakdown of its **UI and layout design**:
+
+---
+
+### **1. Header (Top Section)**
+- **Logo:** The "CrazyGames" logo is placed on the left.
+- **Main Navigation Menu:** To the right of the logo, you’ll find links like:
+  - **Home**, **New**, **Trending Now**, **Updated**, **Originals**, **Multiplayer**.
+- **Category Dropdown:** Below the main menu, a dropdown displays multiple game categories such as **Action, Adventure, Puzzle, Sports, Racing, etc.**
+- **Language Selection:** At the top-right corner, users can select the site’s language.
+
+---
+
+### **2. Main Content Area**
+- **Featured Games:** 
+  - A large banner section at the top highlights the most popular games.
+  - It includes game thumbnails arranged in a **grid layout**.
+- **New Games Section:** 
+  - Below "Featured Games," a section displays newly added games.
+- **CrazyGames Originals:** 
+  - Another section showcasing exclusive games made by CrazyGames.
+
+---
+
+### **3. Sidebar & Additional Features**
+- **Recently Played Games:** 
+  - On the **left sidebar**, users see a list of games they have recently played.
+- **Search Bar:** 
+  - A **search bar** at the top allows users to find specific games.
+- **Game Cards:** 
+  - Each game has a **thumbnail image, title, and a hover effect** that slightly enlarges it when hovered over.
+
+---
+
+### **4. Footer (Bottom Section)**
+- **Company Info & Links:** 
+  - Includes links like **About, Developers, Kids Site, Jobs, Info for Parents, Terms & Conditions, Privacy Policy**.
+- **Social Media Links:** 
+  - Buttons to follow CrazyGames on platforms like Facebook, Twitter, etc.
+
+---
+
+### **5. Design Elements**
+- **Color Scheme:** 
+  - A **clean, modern** layout with a **white background** and **light gray dividers**.
+- **Responsive Design:** 
+  - Works smoothly on **desktop, tablet, and mobile**.
+- **Hover Effects:** 
+  - Game thumbnails slightly **zoom in** when hovered over.
+
+---
+
+### **6. Key Functionalities**
+- **Game Categories:** Users can browse different game genres easily.
+- **Instant Play:** Games load directly on the same page without redirection.
+- **Leaderboard & Ratings:** Users can rate games and view trending games.
+
+---
+
+If you provide this breakdown to your developer, they should be able to create a **replica of CrazyGames.com** with the same structure and functionality.

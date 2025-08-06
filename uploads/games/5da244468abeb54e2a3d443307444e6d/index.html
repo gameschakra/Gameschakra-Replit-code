@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>NumberSnake</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="generator" content="Scirra Construct">
+    <meta name="author" content="Darsan">
+    <meta name="description" content="Color Break Game">
+    <link rel="manifest" href="appmanifest.json">
+    <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128.png">
+    <link rel="apple-touch-icon" sizes="256x256" href="icons/icon-256.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+    <link rel="icon" type="image/png" href="icons/icon-512.png">
+
+    <!-- Ad Placement API -->
+    <script async
+        data-ad-frequency-hint="30s"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2067900913632539" 
+        crossorigin="anonymous">
+    </script>
+    <script>
+        window.adsbygoogle = window.adsbygoogle || [];
+        var adBreak = adConfig = function(o) { adsbygoogle.push(o); }
+    
+        // Ad configuration
+        adConfig({
+            preloadAdBreaks: 'on',  // Ad ko hamesha preload karna
+            sound: 'on',             // Sound on hai
+        });
+    
+        // Global displayAd function
+        window.displayAd = function() {
+
+            console.log("display ad fires");
+            console
+            adBreak({
+                type: 'start',
+                name: 'game_started',
+                beforeAd: () => {
+                    pauseGame(); // Game ko pause karna
+                    muteSound(); // Sound ko mute karna
+                },
+                afterAd: () => {
+                    unpauseGame(); // Game ko resume karna
+                    unmuteSound(); // Sound ko resume karna
+                },
+                adBreakDone: (placementInfo) => {
+                    console.log('Ad break done:', placementInfo);
+                },
+            });
+        };
+    
+        // Game start hone par ad dikhana
+        window.onload = function() {
+            displayAd(); // Game load hone par ad dikhana
+        };
+    </script>
+    
+    
+
+    <!-- Other script includes -->
+    <script src="scripts/supportcheck.js"></script>
+    <script src="scripts/offlineclient.js" type="module"></script>
+    <script src="scripts/main.js" type="module"></script>
+    <script src="scripts/register-sw.js" type="module"></script>
+</head>
+<body>
+    <noscript>
+        <div id="notSupportedWrap">
+            <h2 id="notSupportedTitle">This content requires JavaScript</h2>
+            <p class="notSupportedMessage">JavaScript appears to be disabled. Please enable it to view this content.</p>
+        </div>
+    </noscript>
+</body>
+</html>

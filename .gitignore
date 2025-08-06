@@ -1,0 +1,20 @@
+cat << 'EOF' > .gitignore
+# Node
+node_modules/
+
+# Build / output
+dist/
+
+# Env
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Archives / zips
+*.zip
+
+# OS junk
+.DS_Store

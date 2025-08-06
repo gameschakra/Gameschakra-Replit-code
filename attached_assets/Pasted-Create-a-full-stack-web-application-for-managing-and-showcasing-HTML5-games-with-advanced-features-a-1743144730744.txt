@@ -1,0 +1,101 @@
+Create a full-stack web application for managing and showcasing HTML5 games with advanced features and a modern, responsive UI.
+ 
+Technical Stack:
+- Frontend: React + TypeScript + Tailwind CSS
+- Backend: Express.js + TypeScript
+- Database: PostgreSQL with Drizzle ORM
+- File Storage: Local filesystem for game files and thumbnails
+ 
+Core Features:
+ 
+1. Database Schema:
+- Users: For authentication and user management
+- Categories: For organizing games by type
+- Games: Main game data including metadata and file paths
+- Favorites: Track user's favorite games
+- Recently Played: Track user's gaming history
+ 
+2. Game Management:
+- Upload HTML5 games as ZIP files
+- Auto-extract and serve game files
+- Thumbnail management
+- Game metadata (title, description, category, etc.)
+- Game status (draft/published)
+- Featured games system
+ 
+3. User Interface Components:
+ 
+Home Page:
+- Featured games carousel
+- Game categories grid
+- Recently played games section
+- Popular games section
+ 
+Game Details Page:
+- Game preview iframe
+- Game metadata display
+- Play count and rating
+- Favorite functionality
+- Related games
+ 
+Admin Dashboard:
+- Game management (CRUD operations)
+- Category management
+- Featured games control
+- Game status toggle
+- Analytics overview
+ 
+Navigation:
+- Responsive header with search
+- Category-based navigation
+- User profile section
+- Admin controls
+ 
+4. API Endpoints:
+- Game CRUD operations
+- Category management
+- User interactions (favorites, recently played)
+- File upload handling
+- Analytics tracking
+ 
+5. File Management:
+- Secure file upload system
+- Automatic ZIP extraction
+- HTML entry file detection
+- Thumbnail processing
+- Clean file organization
+ 
+UI/UX Features:
+- Dark/Light theme support
+- Responsive design for all devices
+- Modern card-based game grid
+- Interactive carousel for featured games
+- Loading states with skeletons
+- Toast notifications for actions
+- Form validation with error messages
+- Clean and intuitive admin interface
+ 
+Error Handling & Fixes:
+1. Fixed game file extraction issues by implementing proper path handling
+2. Resolved concurrent file access conflicts
+3. Added proper validation for game ZIP structure
+4. Implemented fallback HTML creation for invalid game packages
+5. Fixed thumbnail aspect ratio consistency
+6. Added proper error boundaries for React components
+7. Implemented proper database connection error handling
+8. Added proper file cleanup on failed uploads
+ 
+Security Features:
+1. Secure file upload validation
+2. Input sanitization
+3. API rate limiting
+4. Proper error handling
+5. Secure database queries with Drizzle
+ 
+Performance Optimizations:
+1. Efficient file handling
+2. Optimized database queries
+3. React Query for data caching
+4. Lazy loading for images
+5. Code splitting for better load times
+ 

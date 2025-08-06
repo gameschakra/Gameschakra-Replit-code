@@ -1,0 +1,62 @@
+### **Error Analysis: "ADM-ZIP: Unknown descriptor format"**  
+Yeh error indicate karta hai ki **ZIP file ka format ADM-ZIP library ke liye invalid hai** ya ADM-ZIP usse properly read nahi kar paa raha. Iska matlab ho sakta hai ki:  
+
+1️⃣ **ZIP file corrupt hai**  
+2️⃣ **ZIP file ek unsupported format me hai (e.g., ZIP64, Deflate64)**  
+3️⃣ **ZIP properly compressed nahi hai ya incomplete hai**  
+
+### **Possible Fixes:**  
+
+#### **1️⃣ ZIP file ko manually check karo**  
+✔ **Extract ZIP file manually** (Windows pe `WinRAR` ya `7-Zip` se extract karke dekho).  
+✔ Agar extract nahi ho rahi toh **ZIP file corrupt hai**—phir se ZIP bana kar upload karo.  
+
+#### **2️⃣ ZIP compression method change karo**  
+Ho sakta hai ki tumne **ZIP64** ya koi aur advanced format use kiya ho jo `adm-zip` support nahi karta.  
+✅ **Fix:**  
+1. Windows users: **WinRAR ya 7-Zip use karke** ZIP file ko **"Legacy ZIP"** format me save karo.  
+2. Mac/Linux: Terminal me **standard ZIP format** use karke re-compress karo:  
+   ```sh
+   zip -r new_game.zip game_folder/
+   ```  
+3. Phir **naya ZIP upload karke try karo**.  
+
+#### **3️⃣ ADM-ZIP ke jagah JSZip use karo**  
+Agar tum backend me `adm-zip` use kar rahe ho aur ye bar-bar error de raha hai, to **JSZip** ya `yauzl` use karne ka try karo:  
+```js
+const JSZip = require("jszip");
+const fs = require("fs");
+
+fs.readFile("game.zip", (err, data) => {
+  if (err) throw err;
+  JSZip.loadAsync(data).then((zip) => {
+    console.log("ZIP file loaded successfully!");
+  }).catch((error) => {
+    console.error("Error loading ZIP:", error);
+  });
+});
+```  
+Ye ZIP files ko **better handle** karta hai aur unsupported formats ka issue kam aata hai.  
+
+#### **4️⃣ Backend me Detailed Error Logging Enable Karo**  
+✔ Agar issue ab bhi solve nahi ho raha, toh backend me ZIP extraction ka error **properly log** karo:  
+```js
+try {
+  const zip = new AdmZip(uploadedFilePath);
+  zip.extractAllTo(outputPath, true);
+} catch (error) {
+  console.error("ZIP Extraction Failed: ", error);
+}
+```  
+
+#### **5️⃣ File Upload Process Check Karo (Multer / FormData Issues)**  
+Ho sakta hai ki **frontend se file properly send nahi ho rahi** ya **file upload ke beech me corrupt ho rahi hai**.  
+✔ **Network tab me dekho ki file correctly upload ho rahi hai ya nahi**.  
+✔ **Multer ka config check karo, kahin size limit ya encoding issue toh nahi?**  
+
+### **Final Steps:**  
+🔹 **ZIP ko manually check karo** aur standard format me re-save karo  
+🔹 **Backend me alternative ZIP libraries try karo**  
+🔹 **Logs enable karke proper error debugging karo**  
+
+Agar ab bhi issue aa raha hai, toh mujhe batao! 🚀
