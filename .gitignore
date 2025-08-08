@@ -1,20 +1,35 @@
-cat << 'EOF' > .gitignore
 # Node
 node_modules/
 
 # Build / output
 dist/
 
-# Env
+# Environment files (keep migrations included)
 .env
-.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# IMPORTANT: Keep migrations directory for production deployment
+# migrations/ - DO NOT IGNORE
+# migrations/meta/ - DO NOT IGNORE
 
 # Logs
 logs/
 *.log
 
-# Archives / zips
+# Archives / zips - except migration-related
 *.zip
 
 # OS junk
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Cache
+.cache/
+*.tsbuildinfo
