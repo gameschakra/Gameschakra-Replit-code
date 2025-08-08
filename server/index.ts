@@ -70,26 +70,35 @@ app.use((req, res, next) => {
   
   // SECURE CORS Configuration
   const origin = req.headers.origin;
+  // Production origins should be set via CORS_ORIGIN environment variable
   const allowedOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://127.0.0.1:5000', 'http://localhost:5000'];
+    : process.env.NODE_ENV === 'production' 
+      ? [] // No default origins in production - must be explicitly set
+      : ['http://localhost:3000', 'http://127.0.0.1:5000', 'http://localhost:5000'];
   
   if (process.env.NODE_ENV === 'production') {
     // Production: strict origin checking
+    if (allowedOrigins.length === 0) {
+      console.warn('[CORS] WARNING: No allowed origins configured for production! Set CORS_ORIGIN environment variable.');
+    }
+    
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       console.log(`[CORS] Allowed origin: ${origin}`);
     } else {
-      console.log(`[CORS] Blocked origin: ${origin}`);
+      console.log(`[CORS] Blocked origin: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
       // Don't set CORS headers for unauthorized origins
     }
   } else {
-    // Development: more permissive
+    // Development: more permissive for localhost testing
     if (origin) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       console.log(`[CORS] Dev mode - allowing origin: ${origin}`);
     } else {
+      // Allow all origins in development for testing
       res.setHeader('Access-Control-Allow-Origin', '*');
+      console.log('[CORS] Dev mode - allowing all origins (no origin header)');
     }
   }
   

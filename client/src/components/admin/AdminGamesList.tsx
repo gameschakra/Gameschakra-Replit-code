@@ -139,18 +139,7 @@ export default function AdminGamesList() {
       const formData = new FormData();
       formData.append('thumbnail', thumbnailFile);
       
-      return fetch(`/api/games/${id}/update-thumbnail`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      }).then(res => {
-        if (!res.ok) {
-          return res.json().then(data => {
-            throw new Error(data.message || 'Failed to update thumbnail');
-          });
-        }
-        return res.json();
-      });
+      return apiRequest('POST', `/api/games/${id}/update-thumbnail`, formData, { isFormData: true });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
@@ -251,6 +240,25 @@ export default function AdminGamesList() {
         </div>
         <div className="overflow-x-auto border rounded-lg">
           <Skeleton className="h-[400px] w-full" />
+        </div>
+      </div>
+    );
+  }
+  
+  // Error boundary for when games fail to load
+  if (!games && !isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
+            Failed to Load Games
+          </h3>
+          <p className="text-red-600 dark:text-red-300 mb-4">
+            There was an error loading the games list. This might be due to a network issue or server problem.
+          </p>
+          <Button onClick={() => refetch()} variant="outline">
+            Try Again
+          </Button>
         </div>
       </div>
     );

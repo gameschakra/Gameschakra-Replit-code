@@ -30,11 +30,8 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     adminToken: req.headers['x-admin-token'] ? 'Present' : 'Not present'
   });
   
-  // If admin token is provided and valid, bypass authentication
-  if (req.headers['x-admin-token'] === 'admin123') {
-    console.log('isAuthenticated middleware - bypassed via admin token');
-    return next();
-  }
+  // Remove hardcoded admin token bypass for security
+  // Admin token should only be used for specific admin operations, not general auth bypass
   
   if (req.isAuthenticated()) {
     console.log('isAuthenticated middleware - AUTHENTICATED, user:', req.user);
@@ -54,12 +51,8 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
     session: req.session || 'No session'
   });
   
-  // Added a special backdoor for testing with admin credential in header
-  const adminToken = req.headers['x-admin-token'];
-  if (adminToken === 'admin123') {
-    console.log('isAdmin middleware - admin access granted via token');
-    return next();
-  }
+  // Remove hardcoded admin token bypass for security
+  // Admin operations should go through proper authentication
   
   if (!req.isAuthenticated()) {
     console.log('isAdmin middleware - not authenticated');

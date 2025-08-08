@@ -3,9 +3,17 @@ import postgres from "postgres";
 
 // Load environment variables explicitly
 import * as dotenv from 'dotenv';
+import { existsSync } from 'fs';
 
-// Load appropriate env file based on NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+// Load appropriate env file based on NODE_ENV and availability
+let envFile = '.env';
+if (process.env.NODE_ENV === 'production' && existsSync('.env.production')) {
+  envFile = '.env.production';
+} else if (existsSync('.env.local')) {
+  envFile = '.env.local';
+}
+
+console.log(`Loading environment from: ${envFile}`);
 dotenv.config({ path: envFile });
 
 // Validate required environment variables

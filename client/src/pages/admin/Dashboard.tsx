@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+// Temporarily disabled ErrorBoundary while fixing JSX structure
+// import ErrorBoundary, { DashboardErrorFallback } from "@/components/ui/error-boundary";
 
 export default function Dashboard() {
   const [location] = useLocation();
@@ -155,8 +157,23 @@ export default function Dashboard() {
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: async (data: { name: string; description: string }) => {
+      // Generate slug from name
+      const slug = data.name
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .trim();
+      
+      const categoryData = {
+        ...data,
+        slug: slug
+      };
+      
+      console.log('Creating category with data:', categoryData);
       // apiRequest already parses the JSON response for us
-      return apiRequest("POST", "/api/categories", data);
+      return apiRequest("POST", "/api/categories", categoryData);
     },
     onSuccess: () => {
       toast({
@@ -396,7 +413,7 @@ export default function Dashboard() {
           </TabsList>
           
           <TabsContent value="games" className="space-y-8">
-            {/* Add New Game Form */}
+                        {/* Add New Game Form */}
             <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
               <h2 className="text-xl font-title font-bold mb-4 text-white">Add New Game</h2>
               <form id="gameForm" onSubmit={handleSubmit} className="space-y-4">
@@ -621,10 +638,10 @@ export default function Dashboard() {
                 <p className="text-gray-400 text-center py-4">No games found.</p>
               )}
             </div>
-          </TabsContent>
+                      </TabsContent>
           
           <TabsContent value="categories" className="space-y-8">
-            {/* Add New Category Form */}
+                        {/* Add New Category Form */}
             <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
               <h2 className="text-xl font-title font-bold mb-4 text-white">Add New Category</h2>
               <form id="categoryForm" onSubmit={handleCategorySubmit} className="space-y-4">
@@ -710,10 +727,10 @@ export default function Dashboard() {
                 <p className="text-gray-400 text-center py-4">No categories found.</p>
               )}
             </div>
-          </TabsContent>
+                      </TabsContent>
 
           <TabsContent value="challenges" className="space-y-8">
-            {/* Add New Challenge Form */}
+                        {/* Add New Challenge Form */}
             <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
               <h2 className="text-xl font-title font-bold mb-4 text-white">Create New Challenge</h2>
               <form id="challengeForm" onSubmit={(e) => {
@@ -750,58 +767,26 @@ export default function Dashboard() {
                   slug: slug
                 };
                 
-                // Call API to create challenge
-                fetch('/api/challenges', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(challengeData),
-                  credentials: 'include'
-                })
-                .then(response => {
-                  if (!response.ok) {
-                    throw new Error('Failed to create challenge');
-                  }
-                  return response.json();
-                })
-                .then(data => {
-                  toast({
-                    title: "Success",
-                    description: "Challenge created successfully",
-                  });
-                  // Reset form
-                  (e.target as HTMLFormElement).reset();
-                  // Refresh challenges list
-                  queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
-                })
-                .catch(error => {
-                  console.error("Error creating challenge:", error);
-                  
-                  // Try to get more detailed error message if available
-                  if (error.response) {
-                    error.response.json().then((data: any) => {
-                      console.error("Server error details:", data);
-                      toast({
-                        title: "Failed to create challenge",
-                        description: data.message ? JSON.stringify(data.message) : error.message,
-                        variant: "destructive",
-                      });
-                    }).catch(() => {
-                      toast({
-                        title: "Failed to create challenge",
-                        description: error.message,
-                        variant: "destructive",
-                      });
+                // Use consistent apiRequest instead of direct fetch
+                apiRequest("POST", "/api/challenges", challengeData)
+                  .then(data => {
+                    toast({
+                      title: "Success",
+                      description: "Challenge created successfully",
                     });
-                  } else {
+                    // Reset form
+                    (e.target as HTMLFormElement).reset();
+                    // Refresh challenges list
+                    queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
+                  })
+                  .catch(error => {
+                    console.error("Error creating challenge:", error);
                     toast({
                       title: "Failed to create challenge",
-                      description: error.message,
+                      description: error.message || "An unexpected error occurred",
                       variant: "destructive",
                     });
-                  }
-                });
+                  });
               }} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -993,35 +978,26 @@ export default function Dashboard() {
                                 variant="default"
                                 size="sm"
                                 onClick={() => {
-                                  // Update challenge status
+                                  // Update challenge status using consistent apiRequest
                                   const newStatus = 
                                     challenge.status === "upcoming" ? "active" : 
                                     challenge.status === "active" ? "completed" : "upcoming";
                                   
-                                  fetch(`/api/challenges/${challenge.id}/update-status`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ status: newStatus }),
-                                    credentials: 'include'
-                                  })
-                                  .then(response => {
-                                    if (!response.ok) throw new Error('Failed to update status');
-                                    return response.json();
-                                  })
-                                  .then(() => {
-                                    toast({
-                                      title: "Success",
-                                      description: `Challenge status updated to ${newStatus}`,
+                                  apiRequest("POST", `/api/challenges/${challenge.id}/update-status`, { status: newStatus })
+                                    .then(() => {
+                                      toast({
+                                        title: "Success",
+                                        description: `Challenge status updated to ${newStatus}`,
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
+                                    })
+                                    .catch(error => {
+                                      toast({
+                                        title: "Failed to update status",
+                                        description: error.message || "An unexpected error occurred",
+                                        variant: "destructive",
+                                      });
                                     });
-                                    queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
-                                  })
-                                  .catch(error => {
-                                    toast({
-                                      title: "Failed to update status",
-                                      description: error.message,
-                                      variant: "destructive",
-                                    });
-                                  });
                                 }}
                                 className="bg-primary hover:bg-primary/90 text-white"
                               >
@@ -1035,30 +1011,23 @@ export default function Dashboard() {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => {
-                                  // Delete challenge
+                                  // Delete challenge using consistent apiRequest
                                   if (confirm(`Are you sure you want to delete "${challenge.title}"?`)) {
-                                    fetch(`/api/challenges/${challenge.id}`, {
-                                      method: 'DELETE',
-                                      credentials: 'include'
-                                    })
-                                    .then(response => {
-                                      if (!response.ok) throw new Error('Failed to delete challenge');
-                                      return response.json();
-                                    })
-                                    .then(() => {
-                                      toast({
-                                        title: "Success",
-                                        description: "Challenge deleted successfully",
+                                    apiRequest("DELETE", `/api/challenges/${challenge.id}`)
+                                      .then(() => {
+                                        toast({
+                                          title: "Success",
+                                          description: "Challenge deleted successfully",
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
+                                      })
+                                      .catch(error => {
+                                        toast({
+                                          title: "Failed to delete challenge",
+                                          description: error.message || "An unexpected error occurred",
+                                          variant: "destructive",
+                                        });
                                       });
-                                      queryClient.invalidateQueries({ queryKey: ['/api/challenges'] });
-                                    })
-                                    .catch(error => {
-                                      toast({
-                                        title: "Failed to delete challenge",
-                                        description: error.message,
-                                        variant: "destructive",
-                                      });
-                                    });
                                   }
                                 }}
                                 className="bg-red-500/30 hover:bg-red-500/50 text-white"
@@ -1126,7 +1095,53 @@ export default function Dashboard() {
                 </Table>
               </div>
             </div>
-          </TabsContent>
+                      </TabsContent>
+          
+          <TabsContent value="blog" className="space-y-8">
+                        {/* Add New Blog Post Form */}
+            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
+              <h2 className="text-xl font-title font-bold mb-4 text-white">Create New Blog Post</h2>
+              <Button variant="default" className="bg-primary hover:bg-primary/90" asChild>
+                <Link href="/admin/blog/create">Create New Post</Link>
+              </Button>
+            </div>
+            
+            {/* Blog Posts List */}
+            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
+              <h2 className="text-xl font-title font-bold mb-4 text-white">Blog Posts</h2>
+              <div className="flex justify-between items-center mb-6">
+                <Button variant="outline" className="border-[#2d3754] hover:bg-[#2d3754] text-white" asChild>
+                  <Link href="/blog">View Blog</Link>
+                </Button>
+                <Button variant="default" className="bg-primary hover:bg-primary/90" asChild>
+                  <Link href="/admin/blog/categories">Manage Categories</Link>
+                </Button>
+              </div>
+              
+              {/* Blog posts table would go here */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-[#1A2134]">
+                    <TableRow>
+                      <TableHead className="text-gray-300">Title</TableHead>
+                      <TableHead className="text-gray-300">Category</TableHead>
+                      <TableHead className="text-gray-300">Status</TableHead>
+                      <TableHead className="text-gray-300">Published Date</TableHead>
+                      <TableHead className="text-right text-gray-300">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {/* We'll add the dynamic blog posts data fetching in the next iteration */}
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-gray-400">
+                        Loading blog posts...
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+                      </TabsContent>
         </Tabs>
       </div>
       

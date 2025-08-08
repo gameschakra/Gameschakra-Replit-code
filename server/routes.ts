@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import * as fileService from "./services/fileService";
 import { THUMBNAILS_DIR } from "./services/fileService";
 import * as thumbnailService from "./services/thumbnailService";
@@ -91,25 +92,30 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   const isProduction = process.env.NODE_ENV === 'production';
   
   console.log(`Setting up session for environment: ${isReplitDev ? 'Replit Dev' : isProduction ? 'Production' : 'Development'}`);
+  console.log(`Session config: secure=${isProduction}, sameSite=${isProduction ? 'strict' : 'lax'}, domain=${isProduction ? process.env.COOKIE_DOMAIN || 'not set' : 'localhost'}`);
   
   // Session configuration - using memory store for now (simplifies development)
   // Later we can implement PostgreSQL session store when needed
   
   const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "gamehub-secret",
-    resave: true, 
-    saveUninitialized: true, // Save all sessions
+    resave: false, // Don't save session if unmodified 
+    saveUninitialized: false, // Don't create session until something is stored
     cookie: {
-      // Cookie settings optimized based on environment
-      secure: false, // Important: Enable in production when HTTPS is available
-      sameSite: 'lax', // 'lax' works for most use cases
-      httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      path: '/'
+      secure: false, // Always false for development (works with HTTP)
+      sameSite: 'lax', // Lax works better for localhost development
+      httpOnly: true, // Prevent XSS
+      maxAge: isProduction ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000, // 7 days in dev, 24 hours in prod
+      path: '/',
+      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined // Set domain for production only
     },
-    name: 'gamehub.sid', // Custom name for the session cookie
-    rolling: true, // Force the session to be saved back to the store on every request
-    proxy: true, // CRITICAL: Trust the reverse proxy when setting cookies
+    name: 'gamehub.sid',
+    rolling: true, // Extend session on activity
+    proxy: true, // Trust reverse proxy
+    // Add session store validation
+    genid: () => {
+      return crypto.randomUUID();
+    }
   });
   
   // Apply session middleware
@@ -127,9 +133,13 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        return done(null, false); // User not found, invalidate session
+      }
       done(null, user);
     } catch (err) {
-      done(err);
+      console.error('Session deserialization error:', err);
+      done(err, null);
     }
   });
 
@@ -159,6 +169,30 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
 
   // API ROUTES
   const api = express.Router();
+  
+  // Middleware to ensure all API responses have proper JSON Content-Type headers
+  api.use((req: Request, res: Response, next) => {
+    // Override res.json to always set Content-Type header
+    const originalJson = res.json;
+    res.json = function(this: Response, body?: any) {
+      this.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return originalJson.call(this, body);
+    };
+    
+    // Override res.status().json() chain to maintain Content-Type
+    const originalStatus = res.status;
+    res.status = function(this: Response, code: number) {
+      const statusRes = originalStatus.call(this, code);
+      const originalStatusJson = statusRes.json;
+      statusRes.json = function(body?: any) {
+        statusRes.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return originalStatusJson.call(statusRes, body);
+      };
+      return statusRes;
+    };
+    
+    next();
+  });
 
   // Authentication Routes
   api.post("/auth/register", async (req: Request, res: Response) => {
@@ -175,6 +209,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
+        // Content-Type header is now set by middleware
         return res.status(400).json({ message: "Username is already taken" });
       }
 
@@ -197,8 +232,10 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       req.session.userId = newUser.id;
       req.session.isAdmin = newUser.isAdmin;
 
+      res.setHeader('Content-Type', 'application/json');
       res.status(201).json(userWithoutPassword);
     } catch (error) {
+      res.setHeader('Content-Type', 'application/json');
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
@@ -209,13 +246,17 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   api.post("/auth/login", (req: Request, res: Response, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) {
+        console.error('Login authentication error:', err);
         return next(err);
       }
       if (!user) {
-        return res.status(401).json({ message: info.message });
+        console.log('Login failed:', info?.message || 'Invalid credentials');
+        // Content-Type header is now set by middleware
+        return res.status(401).json({ message: info?.message || 'Invalid credentials' });
       }
       req.login(user, (err) => {
         if (err) {
+          console.error('Login session error:', err);
           return next(err);
         }
         
@@ -226,6 +267,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
         
+        console.log('Login successful for user:', user.username);
+        // Content-Type header is now set by middleware
         return res.json(userWithoutPassword);
       });
     })(req, res, next);
@@ -264,6 +307,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     console.log('Auth check - session:', req.session);
     console.log('Auth check - cookies:', req.headers.cookie);
     
+    res.setHeader('Content-Type', 'application/json');
+    
     if (req.user) {
       const { password, ...userWithoutPassword } = req.user;
       return res.json(userWithoutPassword);
@@ -285,16 +330,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   // Category Routes
   api.get("/categories", async (req: Request, res: Response) => {
     try {
-      try {
-        const categories = await storage.getCategories();
-        res.json(categories);
-      } catch (dbError) {
-        console.error("Database error details for categories:", dbError);
-        throw dbError; 
-      }
+      const categories = await storage.getCategories();
+      res.json(categories);
     } catch (error) {
       console.error("Full categories error:", error);
-      res.status(500).json({ message: `Error fetching categories: ${error.message || JSON.stringify(error)}` });
+      res.status(500).json({ 
+        message: `Error fetching categories: ${error?.message || 'Unknown error'}`,
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   });
 

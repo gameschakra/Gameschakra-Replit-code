@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import extractZip from 'extract-zip';
+import AdmZip from 'adm-zip';
 
 // Base directories
 export const ROOT_DIR = process.cwd();
@@ -66,7 +67,7 @@ export async function processGameZip(zipBuffer: Buffer): Promise<UploadedGame> {
   
   // Pre-validate ZIP content using adm-zip
   try {
-    const AdmZip = require('adm-zip');
+    // Using AdmZip to validate ZIP content
     try {
       const zip = new AdmZip(zipBuffer);
       const zipEntries = zip.getEntries();

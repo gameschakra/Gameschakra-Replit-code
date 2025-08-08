@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 // Mock data for charts (in a real app, this would come from the API)
 const COLORS = ["#6C63FF", "#FF6584", "#00E396", "#FEB019", "#FF4560", "#775DD0"];
@@ -13,12 +14,22 @@ export default function AdminAnalytics() {
   const [timeRange, setTimeRange] = useState("week");
 
   // Get popular games for chart data
-  const { data: popularGames, isLoading: gamesLoading } = useQuery<Game[]>({
+  const { 
+    data: popularGames, 
+    isLoading: gamesLoading, 
+    error: gamesError,
+    refetch: refetchGames
+  } = useQuery<Game[]>({
     queryKey: ["/api/games/popular", { limit: 10 }],
   });
 
   // Get categories for chart data
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
+  const { 
+    data: categories, 
+    isLoading: categoriesLoading, 
+    error: categoriesError,
+    refetch: refetchCategories
+  } = useQuery({
     queryKey: ["/api/categories"],
   });
 
@@ -46,6 +57,32 @@ export default function AdminAnalytics() {
     : 0;
   const totalCategories = categories ? categories.length : 0;
 
+  // Error state for data loading failures
+  if ((gamesError || categoriesError) && !gamesLoading && !categoriesLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
+            Failed to Load Analytics Data
+          </h3>
+          <p className="text-red-600 dark:text-red-300 mb-4">
+            {gamesError ? `Games: ${gamesError.message}` : ''}
+            {gamesError && categoriesError ? ' | ' : ''}
+            {categoriesError ? `Categories: ${categoriesError.message}` : ''}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => refetchGames()} variant="outline" size="sm">
+              Retry Games
+            </Button>
+            <Button onClick={() => refetchCategories()} variant="outline" size="sm">
+              Retry Categories
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   if (gamesLoading || categoriesLoading) {
     return (
       <div className="space-y-6">
