@@ -12,9 +12,10 @@ chmod +x check-production-ready.sh
 
 #### Database Configuration ✅
 - [x] AWS RDS PostgreSQL connection string configured
-- [x] SSL settings compatible with AWS RDS
+- [x] SSL settings compatible with AWS RDS (rejectUnauthorized: false)
 - [x] Connection pooling configured (MAX_CONNECTIONS=20)
 - [x] Drizzle migrations generated and committed
+- [x] Drizzle config SSL settings fixed for AWS RDS self-signed certificates
 
 #### Server Configuration ✅  
 - [x] Server binds to 0.0.0.0 in production (not 127.0.0.1)

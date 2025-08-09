@@ -23,5 +23,11 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' 
+      ? { 
+          rejectUnauthorized: false, // AWS RDS uses self-signed certificates
+          require: true // Still require SSL connection
+        }
+      : { rejectUnauthorized: false }
   },
 });

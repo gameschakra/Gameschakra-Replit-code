@@ -19,14 +19,20 @@ console.log(`🔗 Database: ${process.env.DATABASE_URL.replace(/:[^:@]*@/, ':***
 
 async function runMigrations() {
   try {
-    // Create migration client with SSL configuration
+    // Create migration client with AWS RDS compatible SSL configuration
     const sslConfig = process.env.NODE_ENV === 'production' 
-      ? { rejectUnauthorized: true }
+      ? { 
+          rejectUnauthorized: false, // AWS RDS uses self-signed certificates
+          require: true // Still require SSL connection
+        }
       : { rejectUnauthorized: false };
 
     const migrationClient = postgres(process.env.DATABASE_URL!, {
       ssl: sslConfig,
       max: 1, // Use single connection for migrations
+      connection: {
+        options: `--search_path=public`
+      }
     });
 
     const db = drizzle(migrationClient);
