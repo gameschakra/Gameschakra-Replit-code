@@ -7,20 +7,20 @@ module.exports = {
     // Environment
     env: {
       NODE_ENV: 'production',
-      PORT: 5000
+      PORT: 3000
     },
     
     // Process management
-    instances: 'max', // Use all CPU cores
-    exec_mode: 'cluster',
+    instances: 1, // Start with single instance, can scale later
+    exec_mode: 'fork', // Use fork mode for better compatibility
     
     // Memory management
-    max_memory_restart: '1G',
+    max_memory_restart: '512M',
     
-    // Logging
-    log_file: '/var/log/gameschakra/combined.log',
-    out_file: '/var/log/gameschakra/out.log',
-    error_file: '/var/log/gameschakra/error.log',
+    // Logging - Use relative paths, PM2 will handle creation
+    log_file: './logs/combined.log',
+    out_file: './logs/out.log',
+    error_file: './logs/error.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     
@@ -36,13 +36,17 @@ module.exports = {
       'node_modules',
       'logs',
       'uploads',
-      '.git'
+      '.git',
+      'dist'
     ],
     
     // Advanced options
     kill_timeout: 5000,
     listen_timeout: 3000,
     shutdown_with_message: true,
+    
+    // Source map support for better error reporting
+    source_map_support: true,
     
     // Environment variables file
     env_file: '.env.production'
@@ -52,13 +56,13 @@ module.exports = {
   deploy: {
     production: {
       user: 'ubuntu',
-      host: ['your-ec2-instance-ip'],
+      host: ['gameschakra.com'],
       ref: 'origin/main',
-      repo: 'https://github.com/your-username/gameschakra.git',
+      repo: 'https://github.com/gameschakra/Gameschakra-Replit-code.git',
       path: '/var/www/gameschakra',
       'pre-deploy-local': '',
-      'post-deploy': 'npm ci && npm run build && npx tsx server/migrate.ts && pm2 reload ecosystem.config.cjs --env production',
-      'pre-setup': ''
+      'post-deploy': 'npm ci && npm run build && npm run db:setup:prod && pm2 reload ecosystem.config.cjs --env production',
+      'pre-setup': 'mkdir -p /var/www/gameschakra/logs'
     }
   }
 };

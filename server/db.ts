@@ -34,8 +34,9 @@ let db: any;
 
 try {
   if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) {
+    // AWS RDS SSL configuration
     const sslConfig = process.env.NODE_ENV === 'production' 
-      ? { rejectUnauthorized: true } // Enforce SSL in production
+      ? { rejectUnauthorized: false } // AWS RDS uses self-signed certificates
       : { rejectUnauthorized: false }; // Allow dev certificates
     
     client = postgres(connectionString, {

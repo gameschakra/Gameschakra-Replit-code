@@ -39,21 +39,77 @@ const upload = multer({
 
 export async function registerRoutes(app: express.Express): Promise<Server> {
   // Health check endpoint (before other middleware)
-  app.get('/api/health', (req: Request, res: Response) => {
+  app.get('/api/health', async (req: Request, res: Response) => {
+    const startTime = Date.now();
+    
+    // Basic health info
     const healthCheck = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       version: process.env.npm_package_version || '1.0.0',
-      database: 'connected', // TODO: Add actual DB health check
+      port: process.env.PORT || '3000',
+      database: { status: 'unknown', responseTime: 0 },
       memory: {
         used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
         total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      },
+      disk: {
+        uploads: 'unknown',
+        migrations: 'unknown'
       }
     };
+
+    // Test database connection
+    try {
+      const dbStart = Date.now();
+      await storage.getCategories(); // Simple query to test DB
+      healthCheck.database = {
+        status: 'connected',
+        responseTime: Date.now() - dbStart
+      };
+    } catch (error) {
+      healthCheck.database = {
+        status: 'disconnected',
+        responseTime: Date.now() - startTime,
+        error: error.message
+      };
+      healthCheck.status = 'unhealthy';
+    }
+
+    // Check file system
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Check uploads directory
+      try {
+        await fs.access('uploads');
+        healthCheck.disk.uploads = 'accessible';
+      } catch {
+        healthCheck.disk.uploads = 'inaccessible';
+      }
+      
+      // Check migrations directory
+      try {
+        await fs.access('migrations/meta/_journal.json');
+        healthCheck.disk.migrations = 'found';
+      } catch {
+        healthCheck.disk.migrations = 'missing';
+        if (healthCheck.status === 'healthy') {
+          healthCheck.status = 'degraded';
+        }
+      }
+    } catch (error) {
+      healthCheck.disk = { error: 'filesystem_check_failed' };
+    }
+
+    // Set appropriate status code
+    const statusCode = healthCheck.status === 'healthy' ? 200 : 
+                      healthCheck.status === 'degraded' ? 200 : 503;
     
-    res.status(200).json(healthCheck);
+    res.status(statusCode).json(healthCheck);
   });
 
   // Configure CORS headers for all requests - consistent approach for both dev & prod

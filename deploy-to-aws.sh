@@ -36,7 +36,12 @@ npm install
 
 # Step 4: Set up environment variables
 echo "🔧 Setting up environment variables..."
-cat > .env.production << EOF
+if [ -f ".env.production.aws" ]; then
+    echo "Using existing .env.production.aws template..."
+    cp .env.production.aws .env.production
+else
+    echo "Creating new .env.production..."
+    cat > .env.production << EOF
 # Production Environment Variables
 NODE_ENV=production
 PORT=3000
@@ -50,6 +55,9 @@ SESSION_SECRET=$(openssl rand -base64 32)
 # CORS Configuration for Production
 CORS_ORIGIN=https://gameschakra.com,https://www.gameschakra.com,http://gameschakra.com,http://www.gameschakra.com
 
+# Database Connection Pool
+MAX_CONNECTIONS=20
+
 # File Upload Settings
 MAX_FILE_SIZE=50000000
 
@@ -61,7 +69,22 @@ COOKIE_DOMAIN=gameschakra.com
 
 # SSL/Security
 SECURE_COOKIES=false
+
+# Performance Settings
+REQUEST_TIMEOUT=300000
+UPLOAD_TIMEOUT=600000
+
+# AWS/Production Specific
+TRUST_PROXY=true
 EOF
+fi
+
+# Generate secure session secret if it's still the default
+if grep -q "CHANGE_THIS_IN_PRODUCTION" .env.production; then
+    SECURE_SECRET=$(openssl rand -base64 32)
+    sed -i "s/CHANGE_THIS_IN_PRODUCTION_USE_openssl_rand_base64_32/$SECURE_SECRET/" .env.production
+    echo "✅ Generated secure session secret"
+fi
 
 echo "✅ Environment file created with secure session secret"
 
