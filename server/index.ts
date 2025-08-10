@@ -28,12 +28,14 @@ import * as fileService from "./services/fileService";
 
 const app = express();
 
-// Trust first proxy for Replit environment - IMPORTANT for cookie handling
-app.set('trust proxy', 1);
+// Trust proxy configuration for AWS/Production deployment
+const trustProxy = process.env.TRUST_PROXY === 'true' ? 1 : false;
+app.set('trust proxy', trustProxy);
 
-// Configure middleware with extended limits for large file uploads
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Configure middleware with production-optimized limits
+const bodyLimit = process.env.BODY_PARSER_LIMIT || '50mb';
+app.use(express.json({ limit: bodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
 // Serve static files from public directory (for ads.txt, sitemap.xml, etc.)
 app.use(express.static('public', {
@@ -50,8 +52,8 @@ app.use('/api/games', express.static(fileService.GAMES_DIR, {
 
 // Configure global server timeout for file uploads
 app.use((req, res, next) => {
-  // Increase request timeout for large file operations
-  req.setTimeout(300000); // 5 minutes
+  const timeout = parseInt(process.env.REQUEST_TIMEOUT || '300000'); // Default 5 minutes
+  req.setTimeout(timeout);
   next();
 });
 
@@ -181,9 +183,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Serve the app on the configured port
+  // Serve the app on the configured port and host
   const port = parseInt(process.env.PORT || '3000');
-  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+  const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
   
   server.listen(port, host, () => {
     log(`🚀 GameHub Pro serving on ${host}:${port}`);

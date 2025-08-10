@@ -52,17 +52,17 @@ module.exports = {
     env_file: '.env.production'
   }],
 
-  // Deployment configuration
+  // Deployment configuration for AWS EC2
   deploy: {
     production: {
       user: 'ubuntu',
       host: ['gameschakra.com'],
       ref: 'origin/main',
-      repo: 'https://github.com/gameschakra/Gameschakra-Replit-code.git',
+      repo: 'https://github.com/gameschakra/Website.git',
       path: '/var/www/gameschakra',
       'pre-deploy-local': '',
-      'post-deploy': 'npm ci && npm run build && npm run db:setup:prod && pm2 reload ecosystem.config.cjs --env production',
-      'pre-setup': 'mkdir -p /var/www/gameschakra/logs'
+      'post-deploy': 'cp .env.production.aws .env.production && npm ci --production=false && npm run build && npm run db:setup:prod && pm2 reload ecosystem.config.cjs --env production',
+      'pre-setup': 'mkdir -p /var/www/gameschakra/logs /var/www/gameschakra/uploads'
     }
   }
 };
