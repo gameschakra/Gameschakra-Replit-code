@@ -98,7 +98,26 @@ server {
     add_header X-XSS-Protection "1; mode=block";
     add_header Referrer-Policy "strict-origin-when-cross-origin";
 
-    # Main application
+    # API routes - handle first to avoid conflicts
+    location /api/ {
+        proxy_pass http://localhost:3000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+        
+        # Essential for session cookies
+        proxy_set_header Cookie \$http_cookie;
+        proxy_pass_header Set-Cookie;
+    }
+
+    # Main application (frontend)
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -112,16 +131,9 @@ server {
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
         
-        # Handle CORS preflight
-        if (\$request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '\$http_origin';
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE';
-            add_header 'Access-Control-Allow-Headers' 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control';
-            add_header 'Access-Control-Allow-Credentials' 'true';
-            add_header 'Content-Length' 0;
-            add_header 'Content-Type' 'text/plain charset=UTF-8';
-            return 204;
-        }
+        # Essential for session cookies
+        proxy_set_header Cookie \$http_cookie;
+        proxy_pass_header Set-Cookie;
     }
 
     # Static files with longer cache

@@ -28,9 +28,8 @@ import * as fileService from "./services/fileService";
 
 const app = express();
 
-// Trust proxy configuration for AWS/Production deployment
-const trustProxy = process.env.TRUST_PROXY === 'true' ? 1 : false;
-app.set('trust proxy', trustProxy);
+// Trust proxy configuration - always trust first proxy for Nginx/AWS
+app.set('trust proxy', 1);
 
 // Configure middleware with production-optimized limits
 const bodyLimit = process.env.BODY_PARSER_LIMIT || '50mb';

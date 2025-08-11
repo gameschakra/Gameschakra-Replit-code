@@ -158,16 +158,16 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     resave: false, // Don't save session if unmodified 
     saveUninitialized: false, // Don't create session until something is stored
     cookie: {
-      secure: false, // Always false for development (works with HTTP)
-      sameSite: 'lax', // Lax works better for localhost development
+      secure: isProduction, // Use HTTPS in production
+      sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin HTTPS behind proxy
       httpOnly: true, // Prevent XSS
-      maxAge: isProduction ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000, // 7 days in dev, 24 hours in prod
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
-      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined // Set domain for production only
+      domain: isProduction ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : undefined
     },
     name: 'gamehub.sid',
     rolling: true, // Extend session on activity
-    proxy: true, // Trust reverse proxy
+    proxy: true, // Trust reverse proxy for secure cookies
     // Add session store validation
     genid: () => {
       return crypto.randomUUID();
