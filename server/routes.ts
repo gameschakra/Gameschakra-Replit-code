@@ -456,19 +456,26 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
-  // Game Routes
+  // GC_FIX: Enhanced game routes with improved search/filter functionality
   api.get("/games", async (req: Request, res: Response) => {
     try {
       const { 
-        limit = 50, // Increased default limit from 12 to 50 to ensure more games are visible
+        limit = 50,
         offset = 0, 
         category, 
+        categoryId: directCategoryId,
         status, 
         featured, 
-        search 
+        search,
+        sort = "newest", // GC_FIX: Add default sort
+        rating,
+        date
       } = req.query;
       
-      const categoryId = category ? Number(category) : undefined;
+      // Parse categoryId from either 'category' or 'categoryId' params
+      const categoryId = directCategoryId ? Number(directCategoryId) : 
+                        (category ? Number(category) : undefined);
+      
       const isFeatured = featured === "true" ? true : 
                         featured === "false" ? false : 
                         undefined;
@@ -479,7 +486,10 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         categoryId,
         status: status as "draft" | "published" | undefined,
         featured: isFeatured,
-        search: search as string
+        search: search as string,
+        sort: sort as string, // GC_FIX: Pass sort parameter
+        rating: rating as string,
+        dateFilter: date as string
       });
       
       res.json(games);
@@ -659,7 +669,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       const game = await gameService.createGame(gameData, gameZipBuffer, thumbnailBuffer);
       
       console.log('Game created successfully with ID:', game.id);
-      res.status(201).json(game);
+      
+      // GC_FIX: Return game with fresh thumbnailUrl for immediate dashboard update
+      const responseGame = {
+        ...game,
+        thumbnailUrl: game.thumbnailUrl ? `${game.thumbnailUrl}?t=${Date.now()}` : null
+      };
+      
+      res.status(201).json(responseGame);
     } catch (error: any) {
       console.error('Error in POST /games:', error);
       
@@ -744,7 +761,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       }
       
       console.log('Game updated successfully:', updatedGame.id);
-      res.json(updatedGame);
+      
+      // GC_FIX: Return game with fresh thumbnailUrl for immediate dashboard update  
+      const responseGame = {
+        ...updatedGame,
+        thumbnailUrl: updatedGame.thumbnailUrl ? `${updatedGame.thumbnailUrl}?t=${Date.now()}` : null
+      };
+      
+      res.json(responseGame);
     } catch (error: any) {
       console.error('Error in PUT /games/:id:', error);
       
@@ -870,7 +894,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       }
       
       console.log('[routes] Game successfully updated with PATCH:', updatedGame.id);
-      res.json(updatedGame);
+      
+      // GC_FIX: Return game with fresh thumbnailUrl for immediate dashboard update  
+      const responseGame = {
+        ...updatedGame,
+        thumbnailUrl: updatedGame.thumbnailUrl ? `${updatedGame.thumbnailUrl}?t=${Date.now()}` : null
+      };
+      
+      res.json(responseGame);
     } catch (error: any) {
       console.error('[routes] Error in PATCH /games/:id:', error);
       
@@ -1223,6 +1254,55 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
+  // GC_FIX: Enhanced thumbnail endpoint with canonical URL support
+  // Serve individual game thumbnails via canonical endpoint
+  api.get("/games/:id/thumbnail", async (req: Request, res: Response) => {
+    try {
+      const gameId = Number(req.params.id);
+      
+      if (isNaN(gameId)) {
+        return res.status(400).json({ message: "Invalid game ID" });
+      }
+      
+      // Get game from database to check for stored thumbnail path
+      const game = await storage.getGameById(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Check if game has a stored thumbnail_path from upload
+      if (game.thumbnailUrl) {
+        // Extract path from URL like "/api/thumbnails/xyz.jpg"
+        const storedPath = game.thumbnailUrl.replace('/api/thumbnails/', '');
+        const uploadsPath = path.join(process.cwd(), 'uploads', 'thumbnails', storedPath);
+        
+        // Check if uploaded thumbnail exists
+        try {
+          await fs.promises.access(uploadsPath);
+          // Set cache-busting headers for now (correctness > perf)
+          res.set('Cache-Control', 'no-store');
+          res.set('Access-Control-Allow-Origin', '*');
+          return res.sendFile(uploadsPath);
+        } catch (err) {
+          console.log(`Uploaded thumbnail not found: ${uploadsPath}, falling back to legacy`);
+        }
+      }
+      
+      // Fallback to legacy mapping system
+      const thumbnailFile = thumbnailManager.getGameThumbnail(gameId, game.title, null);
+      const filePath = thumbnailManager.getThumbnailPath(thumbnailFile);
+      
+      // Set cache-busting headers
+      res.set('Cache-Control', 'no-store');
+      res.set('Access-Control-Allow-Origin', '*');
+      
+      res.sendFile(filePath);
+    } catch (error) {
+      console.error("Error in canonical thumbnail route:", error);
+      res.status(500).json({ message: "Error serving thumbnail" });
+    }
+  });
+
   // Thumbnails route - using the enhanced JSON-based thumbnailManager service
   api.get("/thumbnails/:thumbnailPath", async (req: Request, res: Response) => {
     try {
@@ -1235,6 +1315,18 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       }
       if (thumbnailPath.includes('&')) {
         thumbnailPath = thumbnailPath.split('&')[0];
+      }
+      
+      // GC_FIX: Check uploads directory first for direct thumbnails
+      const uploadsPath = path.join(process.cwd(), 'uploads', 'thumbnails', thumbnailPath);
+      try {
+        await fs.promises.access(uploadsPath);
+        // Set cache-busting headers for uploaded thumbnails
+        res.set('Cache-Control', 'no-store');
+        res.set('Access-Control-Allow-Origin', '*');
+        return res.sendFile(uploadsPath);
+      } catch (err) {
+        // File doesn't exist in uploads, continue to legacy system
       }
       
       // Explicitly parse gameId, ensuring it's a valid number

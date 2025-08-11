@@ -9,19 +9,14 @@ export function getThumbnailSrc(game: {
   thumbnailPath?: string;
   thumbnailHash?: string;
 }) {
-  // Use deterministic pattern for each game ID
-  // This is more reliable than using thumbnailHash or thumbnailPath
-  const baseUrl = `/api/thumbnails/game_${game.id}.jpg`;
+  // GC_FIX: Use canonical endpoint that checks uploaded thumbnails first, then fallbacks
+  const baseUrl = `/api/games/${game.id}/thumbnail`;
   
-  // Always add game ID and name as query parameters
+  // Add cache-busting timestamp for now (correctness > perf)
   const queryParams = new URLSearchParams();
-  queryParams.append('gameId', String(game.id));
-  queryParams.append('gameName', game.title);
-  
-  // Add cache-busting timestamp
   queryParams.append('t', String(Date.now()));
   
-  // Return the complete URL
+  // Return the canonical URL
   return `${baseUrl}?${queryParams.toString()}`;
 }
 

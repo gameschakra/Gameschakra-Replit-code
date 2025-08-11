@@ -108,36 +108,38 @@ export default function FeaturedGameCarousel() {
           >
             {featuredGames.map((game) => (
               <div key={game.id} className="min-w-full md:min-w-[50%] lg:min-w-[33.333%] px-3">
-                <div className="bg-gradient-to-b from-gray-800/70 to-gray-900/70 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 transform transition-transform hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(251,191,36,0.15)] h-full group">
-                  <div className="relative pb-[56.25%]">
-                    {/* Use the improved thumbnail helper for consistent image URLs */}
-                    {(() => {
-                      // Import the shared thumbnail helper
-                      // Using the getThumbnailSrc helper for consistency across components
-                      const thumbnailSrc = getThumbnailSrc(game);
-                      
-                      return thumbnailSrc ? (
-                        <img 
-                          src={thumbnailSrc} 
-                          alt={`${game.title} featured game`} 
-                          className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 w-full h-full">
-                          <PlaceholderImage 
-                            text="Featured Game" 
-                            className="w-full h-full"
+                <Link href={`/games/${game.slug}`} className="block h-full">
+                  <div className="bg-gradient-to-b from-gray-800/70 to-gray-900/70 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 transform transition-transform hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(251,191,36,0.15)] h-full group">
+                    <div className="relative pb-[56.25%]">
+                      {/* Use the improved thumbnail helper for consistent image URLs */}
+                      {(() => {
+                        // Import the shared thumbnail helper
+                        // Using the getThumbnailSrc helper for consistency across components
+                        const thumbnailSrc = getThumbnailSrc(game);
+                        
+                        return thumbnailSrc ? (
+                          <img 
+                            src={thumbnailSrc} 
+                            alt={`${game.title} featured game`} 
+                            className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                            draggable={false}
                           />
+                        ) : (
+                          <div className="absolute inset-0 w-full h-full">
+                            <PlaceholderImage 
+                              text="Featured Game" 
+                              className="w-full h-full"
+                            />
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* GC_FIX: Play overlay with proper pointer events */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center pointer-events-none">
+                        <div className="bg-amber-500 rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300 pointer-events-auto">
+                          <span className="material-icons text-black text-3xl select-none">play_arrow</span>
                         </div>
-                      );
-                    })()}
-                    
-                    {/* Play overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                      <div className="bg-amber-500 rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                        <span className="material-icons text-black text-3xl">play_arrow</span>
                       </div>
-                    </div>
                     
                     {/* Game title overlay */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
@@ -154,20 +156,19 @@ export default function FeaturedGameCarousel() {
                           <span className="text-xs text-gray-300">4.5</span>
                         </div>
                       </div>
+                      </div>
+                    </div>
+                    <div className="p-4 flex justify-between items-center pointer-events-none">
+                      <span className="text-xs text-gray-400 font-medium bg-gray-800/80 px-3 py-1 rounded-full">
+                        {game.category?.name || "Game"}
+                      </span>
+                      {/* GC_FIX: Remove duplicate Play Now link - entire card is now clickable */}
+                      <span className="text-amber-500 flex items-center text-sm font-medium">
+                        Play Now <span className="material-icons text-base ml-1">arrow_forward</span>
+                      </span>
                     </div>
                   </div>
-                  <div className="p-4 flex justify-between items-center">
-                    <span className="text-xs text-gray-400 font-medium bg-gray-800/80 px-3 py-1 rounded-full">
-                      {game.category?.name || "Game"}
-                    </span>
-                    <Link 
-                      href={`/games/${game.slug}`} 
-                      className="text-amber-500 hover:text-amber-400 flex items-center text-sm font-medium"
-                    >
-                      Play Now <span className="material-icons text-base ml-1">arrow_forward</span>
-                    </Link>
-                  </div>
-                </div>
+                </Link>
               </div>
             ))}
           </div>

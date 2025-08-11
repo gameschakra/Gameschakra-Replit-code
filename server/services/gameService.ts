@@ -31,32 +31,35 @@ export async function createGame(gameData: Omit<InsertGame, 'gameDir' | 'entryFi
     const { gameDir, entryFile } = gameResult;
     console.log('Game zip processed successfully:', { gameDir, entryFile });
 
-    // Process thumbnail if provided
-    let thumbnailUrl: string | null = null;
-    if (thumbnailBuffer) {
-      console.log('Processing thumbnail...');
-      const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer);
-      thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
-      console.log('Thumbnail saved:', thumbnailUrl);
-    }
-
-    // Prepare the complete game data
-    const completeGameData = {
+    // Prepare the initial game data without thumbnail
+    const initialGameData = {
       ...gameData,
       gameDir,
       entryFile,
-      thumbnailUrl
+      thumbnailUrl: null
     };
 
-    console.log('Saving game to database:', JSON.stringify({
-      ...completeGameData,
-      description: completeGameData.description ? 'Yes' : 'No',
-      instructions: completeGameData.instructions ? 'Yes' : 'No'
+    console.log('Saving game to database (initial):', JSON.stringify({
+      ...initialGameData,
+      description: initialGameData.description ? 'Yes' : 'No',
+      instructions: initialGameData.instructions ? 'Yes' : 'No'
     }));
 
-    // Create the game record
-    const game = await storage.createGame(completeGameData);
+    // Create the game record first
+    const game = await storage.createGame(initialGameData);
     console.log('Game created successfully with ID:', game.id);
+
+    // Process thumbnail if provided (now we have game ID)
+    if (thumbnailBuffer) {
+      console.log('Processing thumbnail with game ID...');
+      const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer, game.id);
+      const thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
+      console.log('Thumbnail saved:', thumbnailUrl);
+      
+      // Update game with thumbnail URL
+      const updatedGame = await storage.updateGame(game.id, { thumbnailUrl });
+      return updatedGame || game;
+    }
 
     return game;
   } catch (error) {
@@ -97,8 +100,8 @@ export async function updateGame(id: number, gameData: Partial<InsertGame>, zipB
         }
       }
 
-      // Save new thumbnail
-      const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer);
+      // Save new thumbnail with game ID
+      const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer, id);
       updateData.thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
     }
 
@@ -126,9 +129,18 @@ export async function updateGameThumbnail(id: number, thumbnailBuffer: Buffer): 
       oldThumbnailPath = currentGame.thumbnailUrl.split('/').pop() || null;
     }
 
-    // Process the new thumbnail
-    const { thumbnailPath } = await fileService.updateGameThumbnail(oldThumbnailPath, thumbnailBuffer);
+    // Process the new thumbnail with game ID for unique naming
+    const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer, id);
     const thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
+    
+    // Remove old thumbnail if it exists
+    if (oldThumbnailPath) {
+      try {
+        await fileService.removeThumbnail(oldThumbnailPath);
+      } catch (err) {
+        console.log('Failed to remove old thumbnail:', err);
+      }
+    }
 
     // Update the game record
     const updatedGame = await storage.updateGame(id, { thumbnailUrl });

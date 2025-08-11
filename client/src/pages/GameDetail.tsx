@@ -156,12 +156,56 @@ export default function GameDetail() {
     toggleFavoriteMutation.mutate();
   };
 
-  // Fullscreen gameplay
+  // GC_FIX: Enhanced fullscreen functionality with mobile support
   const handleFullscreen = () => {
     const iframe = document.getElementById("game-iframe") as HTMLIFrameElement;
-    if (iframe) {
-      if (iframe.requestFullscreen) {
-        iframe.requestFullscreen();
+    const container = iframe?.parentElement; // Get the container div
+    
+    if (iframe && container) {
+      // Try to request fullscreen on the container or iframe
+      const element = container;
+      const anyElement = element as any;
+      
+      try {
+        if (anyElement.requestFullscreen) {
+          anyElement.requestFullscreen();
+        } else if (anyElement.webkitRequestFullscreen) {
+          anyElement.webkitRequestFullscreen(); // Safari
+        } else if (anyElement.mozRequestFullScreen) {
+          anyElement.mozRequestFullScreen(); // Firefox
+        } else if (anyElement.msRequestFullscreen) {
+          anyElement.msRequestFullscreen(); // IE/Edge
+        } else {
+          console.warn('Fullscreen API not supported');
+        }
+        
+        // Add CSS class when entering fullscreen
+        const handleFullscreenChange = () => {
+          if (document.fullscreenElement === element || 
+              (document as any).webkitFullscreenElement === element ||
+              (document as any).mozFullScreenElement === element ||
+              (document as any).msFullscreenElement === element) {
+            element.style.position = 'fixed';
+            element.style.inset = '0';
+            element.style.zIndex = '9999';
+            element.style.backgroundColor = '#000';
+          } else {
+            // Reset styles when exiting fullscreen
+            element.style.position = '';
+            element.style.inset = '';
+            element.style.zIndex = '';
+            element.style.backgroundColor = '';
+          }
+        };
+        
+        // Listen for fullscreen changes
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        
+      } catch (error) {
+        console.error('Error requesting fullscreen:', error);
       }
     }
   };
@@ -287,7 +331,10 @@ export default function GameDetail() {
                     src={`/api/games/${game.gameDir}/${game.entryFile}`}
                     title={`${game.title} - Play Game`}
                     className="absolute inset-0 w-full h-full border-0"
+                    allow="fullscreen"
                     allowFullScreen
+                    webkitAllowFullScreen
+                    mozAllowFullScreen
                   ></iframe>
                 </div>
               </div>

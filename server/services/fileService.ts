@@ -281,32 +281,32 @@ async function createFallbackHtml(gamePath: string): Promise<void> {
 }
 
 /**
- * Saves a thumbnail image and also adds a copy to the public directory
+ * Saves a thumbnail image with unique filename to avoid collisions
  */
-export async function saveThumbnail(imageBuffer: Buffer): Promise<ThumbnailResult> {
+export async function saveThumbnail(imageBuffer: Buffer, gameId?: number): Promise<ThumbnailResult> {
   if (!imageBuffer || !(imageBuffer instanceof Buffer)) {
     throw new Error('Invalid thumbnail buffer provided');
   }
 
-  // Generate a filename with consistent hash for both locations
-  const fileHash = generateUniqueFolderName();
-  const filename = `${fileHash}.jpg`;
+  // GC_FIX: Generate unique filename with timestamp to avoid collisions
+  const timestamp = Date.now();
+  const randomSuffix = crypto.randomBytes(4).toString('hex');
+  const filename = gameId 
+    ? `game_${gameId}_${timestamp}_${randomSuffix}.jpg`
+    : `thumbnail_${timestamp}_${randomSuffix}.jpg`;
+  
   const thumbnailPath = path.join(THUMBNAILS_DIR, filename);
-  const publicThumbnailPath = path.join(PUBLIC_GAMES_IMAGES_DIR, filename);
   
   console.log(`Saving thumbnail to ${thumbnailPath}`);
   
   try {
     // Make sure the directories exist
     await fsPromises.mkdir(THUMBNAILS_DIR, { recursive: true });
-    await fsPromises.mkdir(PUBLIC_GAMES_IMAGES_DIR, { recursive: true });
     
-    // Write the file to both locations
+    // Write the file to uploads/thumbnails only (canonical storage)
     await fsPromises.writeFile(thumbnailPath, imageBuffer);
-    await fsPromises.writeFile(publicThumbnailPath, imageBuffer);
     
     console.log(`Thumbnail saved successfully: ${filename}`);
-    console.log(`Public copy saved to: ${publicThumbnailPath}`);
     
     return {
       thumbnailPath: filename

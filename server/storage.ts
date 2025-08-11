@@ -39,6 +39,9 @@ export interface IStorage {
     featured?: boolean;
     search?: string;
     excludeId?: number;
+    sort?: string; // GC_FIX: Add sort parameter
+    rating?: string;
+    dateFilter?: string;
   }): Promise<Game[]>;
   getGameById(id: number): Promise<Game | undefined>;
   getGameBySlug(slug: string): Promise<Game | undefined>;
@@ -204,6 +207,9 @@ export class MemStorage implements IStorage {
     featured?: boolean;
     search?: string;
     excludeId?: number;
+    sort?: string; // GC_FIX: Add sort parameter
+    rating?: string;
+    dateFilter?: string;
   }): Promise<Game[]> {
     let result = Array.from(this.games.values());
 
@@ -231,8 +237,51 @@ export class MemStorage implements IStorage {
       result = result.filter(game => game.id !== options.excludeId);
     }
 
-    // Sort by updatedAt
-    result.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    // GC_FIX: Add date filtering for MemStorage
+    if (options?.dateFilter) {
+      const now = new Date();
+      let startDate: Date | null = null;
+      
+      switch (options.dateFilter) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+      }
+      
+      if (startDate) {
+        result = result.filter(game => game.createdAt >= startDate!);
+      }
+    }
+
+    // GC_FIX: Apply sorting based on sort parameter
+    switch (options?.sort) {
+      case 'oldest':
+        result.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        break;
+      case 'popular':
+        result.sort((a, b) => b.playCount - a.playCount);
+        break;
+      case 'rating':
+        result.sort((a, b) => {
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return b.playCount - a.playCount;
+        });
+        break;
+      case 'newest':
+      default:
+        result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        break;
+    }
 
     // Apply pagination
     if (options?.offset) {
@@ -848,6 +897,9 @@ export class DatabaseStorage implements IStorage {
     featured?: boolean;
     search?: string;
     excludeId?: number;
+    sort?: string; // GC_FIX: Add sort parameter
+    rating?: string;
+    dateFilter?: string;
   }): Promise<Game[]> {
     let query = db.select().from(games);
 
@@ -874,12 +926,52 @@ export class DatabaseStorage implements IStorage {
       conditions.push(ne(games.id, options.excludeId));
     }
 
+    // GC_FIX: Add date filtering
+    if (options?.dateFilter) {
+      const now = new Date();
+      let startDate: Date | null = null;
+      
+      switch (options.dateFilter) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+      }
+      
+      if (startDate) {
+        conditions.push(sql`${games.createdAt} >= ${startDate}`);
+      }
+    }
+
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
 
-    // Apply sorting
-    query = query.orderBy(desc(games.updatedAt));
+    // GC_FIX: Apply sorting based on sort parameter
+    switch (options?.sort) {
+      case 'oldest':
+        query = query.orderBy(asc(games.createdAt));
+        break;
+      case 'popular':
+        query = query.orderBy(desc(games.playCount));
+        break;
+      case 'rating':
+        // For now, sort by featured status as proxy for rating
+        query = query.orderBy(desc(games.isFeatured), desc(games.playCount));
+        break;
+      case 'newest':
+      default:
+        query = query.orderBy(desc(games.createdAt));
+        break;
+    }
 
     // Apply pagination
     if (options?.limit) {
