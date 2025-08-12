@@ -318,6 +318,40 @@ export async function saveThumbnail(imageBuffer: Buffer, gameId?: number): Promi
   }
 }
 
+// GC_FIX: create or update canonical thumbnail link
+export async function updateCanonicalThumbnail(gameId: number, savedAbsPath: string) {
+  const projectRoot = process.cwd(); // Use process.cwd() for correct project root
+  const canonicalRel = path.join('uploads', 'thumbnails', `game_${gameId}.jpg`);
+  const canonicalAbs = path.join(projectRoot, canonicalRel);
+
+  try {
+    // ensure parent dir exists
+    await fsPromises.mkdir(path.dirname(canonicalAbs), { recursive: true });
+
+    // prefer symlink; if it fails on this FS, fallback to hardlink, then copy
+    try {
+      // remove old link/file if exists
+      await fsPromises.rm(canonicalAbs, { force: true });
+      await fsPromises.symlink(savedAbsPath, canonicalAbs);
+      console.log(`[thumb] Created symlink: ${canonicalAbs} -> ${savedAbsPath}`);
+    } catch {
+      try {
+        await fsPromises.rm(canonicalAbs, { force: true });
+        await fsPromises.link(savedAbsPath, canonicalAbs);
+        console.log(`[thumb] Created hardlink: ${canonicalAbs} -> ${savedAbsPath}`);
+      } catch {
+        // last resort: copy
+        await fsPromises.copyFile(savedAbsPath, canonicalAbs);
+        console.log(`[thumb] Copied file: ${canonicalAbs} <- ${savedAbsPath}`);
+      }
+    }
+    return { canonicalRel, canonicalAbs };
+  } catch (e) {
+    console.error('[thumb] failed to update canonical', { gameId, savedAbsPath, error: e });
+    return null;
+  }
+}
+
 /**
  * Removes a game directory
  */

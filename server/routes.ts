@@ -1254,52 +1254,30 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
-  // GC_FIX: Enhanced thumbnail endpoint with canonical URL support
-  // Serve individual game thumbnails via canonical endpoint
-  api.get("/games/:id/thumbnail", async (req: Request, res: Response) => {
+  // GC_FIX: canonical thumbnail redirect
+  api.get('/games/:id/thumbnail', async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid id' });
+
+    const projectRoot = process.cwd(); // Use process.cwd() for correct project root
+    const canonicalAbs = path.join(projectRoot, 'uploads', 'thumbnails', `game_${id}.jpg`);
     try {
-      const gameId = Number(req.params.id);
-      
-      if (isNaN(gameId)) {
-        return res.status(400).json({ message: "Invalid game ID" });
-      }
-      
-      // Get game from database to check for stored thumbnail path
-      const game = await storage.getGameById(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
-      
-      // Check if game has a stored thumbnail_path from upload
-      if (game.thumbnailUrl) {
-        // Extract path from URL like "/api/thumbnails/xyz.jpg"
-        const storedPath = game.thumbnailUrl.replace('/api/thumbnails/', '');
-        const uploadsPath = path.join(process.cwd(), 'uploads', 'thumbnails', storedPath);
-        
-        // Check if uploaded thumbnail exists
+      await fs.promises.access(canonicalAbs);
+      // Redirect to public URL under /uploads (served by Nginx alias)
+      return res.redirect(302, `/uploads/thumbnails/game_${id}.jpg`);
+    } catch {
+      // fallback: if DB thumbnail_url exists and file exists => redirect there
+      const game = await storage.getGameById(id);
+      if (game?.thumbnailUrl) {
+        const abs = path.isAbsolute(game.thumbnailUrl)
+          ? game.thumbnailUrl
+          : path.join(projectRoot, game.thumbnailUrl);
         try {
-          await fs.promises.access(uploadsPath);
-          // Set cache-busting headers for now (correctness > perf)
-          res.set('Cache-Control', 'no-store');
-          res.set('Access-Control-Allow-Origin', '*');
-          return res.sendFile(uploadsPath);
-        } catch (err) {
-          console.log(`Uploaded thumbnail not found: ${uploadsPath}, falling back to legacy`);
-        }
+          await fs.promises.access(abs);
+          return res.redirect(302, `/${game.thumbnailUrl.replace(/^\//, '')}`);
+        } catch {}
       }
-      
-      // Fallback to legacy mapping system
-      const thumbnailFile = thumbnailManager.getGameThumbnail(gameId, game.title, null);
-      const filePath = thumbnailManager.getThumbnailPath(thumbnailFile);
-      
-      // Set cache-busting headers
-      res.set('Cache-Control', 'no-store');
-      res.set('Access-Control-Allow-Origin', '*');
-      
-      res.sendFile(filePath);
-    } catch (error) {
-      console.error("Error in canonical thumbnail route:", error);
-      res.status(500).json({ message: "Error serving thumbnail" });
+      return res.status(404).json({ message: 'Thumbnail not found' });
     }
   });
 

@@ -1,5 +1,6 @@
 import { storage } from '../storage';
 import * as fileService from './fileService';
+import path from 'path'; // GC_FIX: Add path import for canonical thumbnails
 import { 
   InsertGame, Game, InsertCategory, Category, 
   InsertFavorite, InsertRecentlyPlayed 
@@ -56,6 +57,14 @@ export async function createGame(gameData: Omit<InsertGame, 'gameDir' | 'entryFi
       const thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
       console.log('Thumbnail saved:', thumbnailUrl);
       
+      // GC_FIX: Create canonical thumbnail link (don't fail main request if this fails)
+      try {
+        const savedAbsPath = path.join(fileService.THUMBNAILS_DIR, thumbnailPath);
+        await fileService.updateCanonicalThumbnail(game.id, savedAbsPath);
+      } catch (error) {
+        console.error('[gameService] Failed to create canonical thumbnail link:', error);
+      }
+      
       // Update game with thumbnail URL
       const updatedGame = await storage.updateGame(game.id, { thumbnailUrl });
       return updatedGame || game;
@@ -103,6 +112,14 @@ export async function updateGame(id: number, gameData: Partial<InsertGame>, zipB
       // Save new thumbnail with game ID
       const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer, id);
       updateData.thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
+      
+      // GC_FIX: Create canonical thumbnail link (don't fail main request if this fails)
+      try {
+        const savedAbsPath = path.join(fileService.THUMBNAILS_DIR, thumbnailPath);
+        await fileService.updateCanonicalThumbnail(id, savedAbsPath);
+      } catch (error) {
+        console.error('[gameService] Failed to create canonical thumbnail link:', error);
+      }
     }
 
     // Update the game record
@@ -132,6 +149,14 @@ export async function updateGameThumbnail(id: number, thumbnailBuffer: Buffer): 
     // Process the new thumbnail with game ID for unique naming
     const { thumbnailPath } = await fileService.saveThumbnail(thumbnailBuffer, id);
     const thumbnailUrl = `/api/thumbnails/${thumbnailPath}`;
+    
+    // GC_FIX: Create canonical thumbnail link (don't fail main request if this fails)
+    try {
+      const savedAbsPath = path.join(fileService.THUMBNAILS_DIR, thumbnailPath);
+      await fileService.updateCanonicalThumbnail(id, savedAbsPath);
+    } catch (error) {
+      console.error('[gameService] Failed to create canonical thumbnail link:', error);
+    }
     
     // Remove old thumbnail if it exists
     if (oldThumbnailPath) {
