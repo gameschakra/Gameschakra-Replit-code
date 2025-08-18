@@ -78,7 +78,8 @@ export const games = {
     if (options.limit) queryParams.append("limit", options.limit.toString());
     if (options.offset) queryParams.append("offset", options.offset.toString());
     if (options.categoryId) queryParams.append("categoryId", options.categoryId.toString());
-    if (options.search) queryParams.append("search", options.search);
+    // GC_FIX: Use 'q' param for search
+    if (options.search) queryParams.append("q", options.search);
     if (options.status) queryParams.append("status", options.status);
     if (options.featured) queryParams.append("featured", options.featured.toString());
     

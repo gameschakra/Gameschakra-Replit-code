@@ -466,11 +466,15 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         categoryId: directCategoryId,
         status, 
         featured, 
-        search,
+        q, query, search,
         sort = "newest", // GC_FIX: Add default sort
         rating,
+        dateFilter,
         date
       } = req.query;
+      
+      // GC_FIX: tolerate multiple param names for search
+      const termRaw = (q ?? query ?? search ?? '').toString().trim();
       
       // Parse categoryId from either 'category' or 'categoryId' params
       const categoryId = directCategoryId ? Number(directCategoryId) : 
@@ -486,10 +490,10 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         categoryId,
         status: status as "draft" | "published" | undefined,
         featured: isFeatured,
-        search: search as string,
+        search: termRaw,
         sort: sort as string, // GC_FIX: Pass sort parameter
         rating: rating as string,
-        dateFilter: date as string
+        dateFilter: (dateFilter || date) as string
       });
       
       res.json(games);
