@@ -27,6 +27,9 @@ export default function GameDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
   const embedCodeRef = useRef<HTMLInputElement>(null);
+  // GC_FIX: Add refs for fullscreen functionality
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Get game details
   const {
@@ -156,59 +159,62 @@ export default function GameDetail() {
     toggleFavoriteMutation.mutate();
   };
 
-  // GC_FIX: Enhanced fullscreen functionality with mobile support
-  const handleFullscreen = () => {
-    const iframe = document.getElementById("game-iframe") as HTMLIFrameElement;
-    const container = iframe?.parentElement; // Get the container div
+  // GC_FIX: Enhanced fullscreen functionality with mobile + desktop support
+  const enterFullscreen = () => {
+    const container = gameContainerRef.current;
     
-    if (iframe && container) {
-      // Try to request fullscreen on the container or iframe
-      const element = container;
-      const anyElement = element as any;
-      
-      try {
-        if (anyElement.requestFullscreen) {
-          anyElement.requestFullscreen();
-        } else if (anyElement.webkitRequestFullscreen) {
-          anyElement.webkitRequestFullscreen(); // Safari
-        } else if (anyElement.mozRequestFullScreen) {
-          anyElement.mozRequestFullScreen(); // Firefox
-        } else if (anyElement.msRequestFullscreen) {
-          anyElement.msRequestFullscreen(); // IE/Edge
-        } else {
-          console.warn('Fullscreen API not supported');
-        }
-        
-        // Add CSS class when entering fullscreen
-        const handleFullscreenChange = () => {
-          if (document.fullscreenElement === element || 
-              (document as any).webkitFullscreenElement === element ||
-              (document as any).mozFullScreenElement === element ||
-              (document as any).msFullscreenElement === element) {
-            element.style.position = 'fixed';
-            element.style.inset = '0';
-            element.style.zIndex = '9999';
-            element.style.backgroundColor = '#000';
-          } else {
-            // Reset styles when exiting fullscreen
-            element.style.position = '';
-            element.style.inset = '';
-            element.style.zIndex = '';
-            element.style.backgroundColor = '';
-          }
-        };
-        
-        // Listen for fullscreen changes
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-        
-      } catch (error) {
-        console.error('Error requesting fullscreen:', error);
+    if (!container) return;
+    
+    const anyContainer = container as any;
+    
+    try {
+      if (anyContainer.requestFullscreen) {
+        anyContainer.requestFullscreen();
+      } else if (anyContainer.webkitRequestFullscreen) {
+        anyContainer.webkitRequestFullscreen(); // Safari
+      } else if (anyContainer.mozRequestFullScreen) {
+        anyContainer.mozRequestFullScreen(); // Firefox
+      } else if (anyContainer.msRequestFullscreen) {
+        anyContainer.msRequestFullscreen(); // IE/Edge
+      } else {
+        console.warn('Fullscreen API not supported');
       }
+    } catch (error) {
+      console.error('Error requesting fullscreen:', error);
     }
   };
+
+  // GC_FIX: Listen to fullscreen changes and toggle body scroll
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const container = gameContainerRef.current;
+      if (!container) return;
+
+      const isFullscreen = document.fullscreenElement === container || 
+                          (document as any).webkitFullscreenElement === container ||
+                          (document as any).mozFullScreenElement === container ||
+                          (document as any).msFullscreenElement === container;
+
+      if (isFullscreen) {
+        document.body.classList.add('no-scroll');
+      } else {
+        document.body.classList.remove('no-scroll');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      document.body.classList.remove('no-scroll');
+    };
+  }, []);
   
   // Open embed dialog
   const handleOpenEmbedDialog = () => {
@@ -324,17 +330,23 @@ export default function GameDetail() {
           <div className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Game Iframe Container */}
-              <div className="w-full md:w-3/4 bg-black rounded-lg overflow-hidden shadow-lg">
+              <div 
+                ref={gameContainerRef}
+                className="w-full md:w-3/4 bg-black rounded-lg overflow-hidden shadow-lg gc-game-container"
+              >
                 <div className="relative pb-[56.25%]">
                   <iframe
-                    id="game-iframe"
+                    ref={iframeRef}
                     src={`/api/games/${game.gameDir}/${game.entryFile}`}
                     title={`${game.title} - Play Game`}
-                    className="absolute inset-0 w-full h-full border-0"
-                    allow="fullscreen"
+                    style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                    className="absolute inset-0"
+                    allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
                     allowFullScreen
-                    webkitAllowFullScreen
-                    mozAllowFullScreen
+                    // @ts-ignore - Legacy attributes for compatibility
+                    webkitallowfullscreen="true"
+                    // @ts-ignore - Legacy attributes for compatibility  
+                    mozallowfullscreen="true"
                   ></iframe>
                 </div>
               </div>
@@ -425,7 +437,7 @@ export default function GameDetail() {
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  <Button onClick={handleFullscreen} size="lg" className="w-full flex items-center justify-center gap-2 font-bold text-white bg-primary hover:bg-primary/90">
+                  <Button onClick={enterFullscreen} size="lg" className="w-full flex items-center justify-center gap-2 font-bold text-white bg-primary hover:bg-primary/90">
                     <span className="material-icons">fullscreen</span>
                     <span>Play Fullscreen</span>
                   </Button>

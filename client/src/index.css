@@ -113,3 +113,23 @@
     transition: all 0.3s ease-out;
   }
 }
+
+/* GC_FIX: fullscreen styling */
+.no-scroll { overflow: hidden; }
+
+.gc-game-container:fullscreen,
+.gc-game-container:-webkit-full-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000 !important;
+  z-index: 9999 !important;
+}
+
+.gc-game-container:fullscreen iframe,
+.gc-game-container:-webkit-full-screen iframe {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}

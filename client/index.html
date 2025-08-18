@@ -54,6 +54,13 @@
     <div class="adsbygoogle" style="height: 1px; width: 1px;"></div>
   </div>
   
+  <!-- GC_FIX: Optional globals to prevent ReferenceError noise -->
+  <script>
+    window.gameLoaded ||= function(){};
+    window.gameStart  ||= function(){};
+    window.gameEnd    ||= function(){};
+  </script>
+  
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
