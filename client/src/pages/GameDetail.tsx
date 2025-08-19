@@ -19,6 +19,7 @@ import {
   DialogHeader
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+// GC_FIX(fullscreen): Remove complex hooks, use direct implementation
 
 export default function GameDetail() {
   const { slug } = useParams();
@@ -27,9 +28,9 @@ export default function GameDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
   const embedCodeRef = useRef<HTMLInputElement>(null);
-  // GC_FIX: Add refs for fullscreen functionality
-  const gameContainerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // GC_FIX(fullscreen): Direct refs and handlers
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   // Get game details
   const {
@@ -159,60 +160,57 @@ export default function GameDetail() {
     toggleFavoriteMutation.mutate();
   };
 
-  // GC_FIX: Enhanced fullscreen functionality with mobile + desktop support
-  const enterFullscreen = () => {
-    const container = gameContainerRef.current;
-    
-    if (!container) return;
-    
-    const anyContainer = container as any;
-    
-    try {
-      if (anyContainer.requestFullscreen) {
-        anyContainer.requestFullscreen();
-      } else if (anyContainer.webkitRequestFullscreen) {
-        anyContainer.webkitRequestFullscreen(); // Safari
-      } else if (anyContainer.mozRequestFullScreen) {
-        anyContainer.mozRequestFullScreen(); // Firefox
-      } else if (anyContainer.msRequestFullscreen) {
-        anyContainer.msRequestFullscreen(); // IE/Edge
-      } else {
-        console.warn('Fullscreen API not supported');
-      }
-    } catch (error) {
-      console.error('Error requesting fullscreen:', error);
+  // GC_FIX(fullscreen): Direct fullscreen implementation
+  function enterFullscreen(node: HTMLElement) {
+    const anyNode = node as any;
+    if (anyNode.requestFullscreen) return anyNode.requestFullscreen();
+    if (anyNode.webkitRequestFullscreen) return anyNode.webkitRequestFullscreen();
+    if (anyNode.mozRequestFullScreen) return anyNode.mozRequestFullScreen();
+    if (anyNode.msRequestFullscreen) return anyNode.msRequestFullscreen();
+  }
+
+  function exitFullscreen() {
+    const d: any = document;
+    if (document.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement) {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (d.webkitExitFullscreen) return d.webkitExitFullscreen();
+      if (d.mozCancelFullScreen) return d.mozCancelFullScreen();
+      if (d.msExitFullscreen) return d.msExitFullscreen();
+    }
+  }
+
+  function isFullscreenActive() {
+    const d: any = document;
+    return !!(document.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement);
+  }
+
+  const onFullscreenClick = async () => {
+    if (containerRef.current) {
+      await enterFullscreen(containerRef.current);
+      // try focusing game after a tick
+      setTimeout(() => iframeRef.current?.contentWindow?.focus(), 50);
+      window.scrollTo({ top: 0, behavior: 'instant' as any });
     }
   };
 
-  // GC_FIX: Listen to fullscreen changes and toggle body scroll
+  // Listen to fullscreen changes and toggle classes
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const container = gameContainerRef.current;
-      if (!container) return;
-
-      const isFullscreen = document.fullscreenElement === container || 
-                          (document as any).webkitFullscreenElement === container ||
-                          (document as any).mozFullScreenElement === container ||
-                          (document as any).msFullscreenElement === container;
-
-      if (isFullscreen) {
-        document.body.classList.add('no-scroll');
-      } else {
-        document.body.classList.remove('no-scroll');
-      }
+    const d: any = document;
+    const onChange = () => {
+      const active = isFullscreenActive();
+      document.documentElement.classList.toggle('gc-fs', active);
+      document.body.classList.toggle('gc-fs', active);
+      if (active) window.scrollTo({ top: 0, behavior: 'instant' as any });
     };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    document.addEventListener('mozfullscreenchange', onChange);
+    document.addEventListener('MSFullscreenChange', onChange);
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-      document.body.classList.remove('no-scroll');
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+      document.removeEventListener('mozfullscreenchange', onChange);
+      document.removeEventListener('MSFullscreenChange', onChange);
     };
   }, []);
   
@@ -329,24 +327,26 @@ export default function GameDetail() {
         <div className="bg-card rounded-lg border border-border shadow-md overflow-hidden">
           <div className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Game Iframe Container */}
+              {/* GC_FIX(fullscreen): Game container that can be fullscreened */}
               <div 
-                ref={gameContainerRef}
-                className="w-full md:w-3/4 bg-black rounded-lg overflow-hidden shadow-lg gc-game-container"
+                ref={containerRef}
+                id="game-root"
+                className="game-container relative bg-black w-full md:w-3/4 rounded-lg overflow-hidden shadow-lg"
               >
                 <div className="relative pb-[56.25%]">
                   <iframe
                     ref={iframeRef}
                     src={`/api/games/${game.gameDir}/${game.entryFile}`}
                     title={`${game.title} - Play Game`}
-                    style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
-                    className="absolute inset-0"
-                    allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+                    className="w-full h-full block absolute inset-0"
+                    allow="fullscreen; autoplay; encrypted-media; gamepad; xr-spatial-tracking"
                     allowFullScreen
-                    // @ts-ignore - Legacy attributes for compatibility
-                    webkitallowfullscreen="true"
-                    // @ts-ignore - Legacy attributes for compatibility  
-                    mozallowfullscreen="true"
+                    // @ts-ignore - Important for iOS video/sound behavior
+                    webkit-playsinline="true"
+                    // @ts-ignore - Important for iOS video/sound behavior
+                    playsInline
+                    referrerPolicy="no-referrer"
+                    style={{ border: 0 }}
                   ></iframe>
                 </div>
               </div>
@@ -437,7 +437,7 @@ export default function GameDetail() {
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  <Button onClick={enterFullscreen} size="lg" className="w-full flex items-center justify-center gap-2 font-bold text-white bg-primary hover:bg-primary/90">
+                  <Button onClick={onFullscreenClick} size="lg" className="w-full flex items-center justify-center gap-2 font-bold text-white bg-primary hover:bg-primary/90">
                     <span className="material-icons">fullscreen</span>
                     <span>Play Fullscreen</span>
                   </Button>
