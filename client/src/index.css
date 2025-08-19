@@ -114,62 +114,38 @@
   }
 }
 
-/* ===== GC_FIX: robust mobile fullscreen ===== */
+/* ===== GC_FIX: Element-based fullscreen for game container ===== */
 
-/* Prevent scroll underlays when fullscreen active */
-html.gc-fs,
-body.gc-fs {
-  overflow: hidden !important;
-  height: 100%;
-}
-
-/* The container that goes fullscreen must overlay everything */
-#game-root:fullscreen,
-#game-root:-webkit-full-screen,
-#game-root:-moz-full-screen,
-#game-root:-ms-fullscreen,
-.game-container:fullscreen,
-.game-container:-webkit-full-screen,
-.game-container:-moz-full-screen,
-.game-container:-ms-fullscreen {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important; /* d*vh handles mobile browser UI */
-  z-index: 2147483647 !important;
-  background: #000 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Make the iframe fill the fullscreen container */
-#game-root:fullscreen iframe,
-#game-root:-webkit-full-screen iframe,
-#game-root:-moz-full-screen iframe,
-#game-root:-ms-fullscreen iframe,
-.game-container:fullscreen iframe,
-.game-container:-webkit-full-screen iframe,
-.game-container:-moz-full-screen iframe,
-.game-container:-ms-fullscreen iframe {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  border: 0 !important;
-  display: block !important;
-}
-
-/* Optional: backdrop color when FS */
-:fullscreen::backdrop,
-:-webkit-full-screen::backdrop {
+/* Normal layout size */
+.game-shell {
+  position: relative;
+  aspect-ratio: 16 / 9;   /* adjust if needed */
+  width: 100%;
+  max-width: 980px;       /* optional */
+  margin: 0 auto;
   background: #000;
 }
 
-/* Safe-area for iOS notches */
-#game-root:fullscreen,
-#game-root:-webkit-full-screen {
-  padding-left: env(safe-area-inset-left, 0);
-  padding-right: env(safe-area-inset-right, 0);
-  padding-top: env(safe-area-inset-top, 0);
-  padding-bottom: env(safe-area-inset-bottom, 0);
+/* When the shell itself is fullscreen */
+.game-shell:fullscreen,
+.game-shell:-webkit-full-screen {
+  position: fixed !important;
+  inset: 0 !important;          /* top/right/bottom/left = 0 */
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  background: #000;
+}
+
+/* Ensure iframe fills shell */
+.game-shell:fullscreen > iframe,
+.game-shell:-webkit-full-screen > iframe {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Optional: prevent page scroll while FS */
+:fullscreen body { 
+  overflow: hidden; 
 }

@@ -138,16 +138,10 @@ export default function GameDetailsPage() {
         try {
           if (document.fullscreenElement) return; // Already in fullscreen mode
           
-          // Try to request fullscreen on the iframe first
+          // Try to request fullscreen on the iframe only
           gameFrameRef.current?.requestFullscreen().catch(err => {
             console.error(`Error attempting iframe fullscreen: ${err}`);
-            
-            // If that fails, try to make the document fullscreen
-            try {
-              document.documentElement.requestFullscreen();
-            } catch (docErr) {
-              console.error(`Error attempting document fullscreen: ${docErr}`);
-            }
+            // Note: No fallback to document fullscreen to avoid whole-page fullscreen
           });
           
           setIsFullscreen(true);
