@@ -19,7 +19,8 @@ import {
   DialogHeader
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-// GC_FIX(fullscreen): Remove complex hooks, use direct implementation
+// GC_FIX(fullscreen): Element-based fullscreen with overlay fallback
+import FullscreenGameOverlay from "@/components/games/FullscreenGameOverlay";
 
 export default function GameDetail() {
   const { slug } = useParams();
@@ -28,9 +29,10 @@ export default function GameDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
   const embedCodeRef = useRef<HTMLInputElement>(null);
-  // GC_FIX(fullscreen): Element-based fullscreen refs
+  // GC_FIX(fullscreen): Element-based fullscreen refs + overlay state
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [overlayFs, setOverlayFs] = useState(false);
 
   // Get game details
   const {
@@ -179,21 +181,41 @@ export default function GameDetail() {
     return fn && fn.call(document);
   }
 
-  // GC_FIX(fullscreen): Element fullscreen handler - targets iframe/container only
+  // GC_FIX(fullscreen): Listen for fullscreen changes
+  useEffect(() => {
+    const onChange = () => {
+      const active = !!(document.fullscreenElement 
+        || (document as any).webkitFullscreenElement 
+        || (document as any).mozFullScreenElement);
+      if (!active) setOverlayFs(false);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange as any);
+    document.addEventListener("mozfullscreenchange", onChange as any);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange as any);
+      document.removeEventListener("mozfullscreenchange", onChange as any);
+    };
+  }, []);
+
+  // GC_FIX(fullscreen): Element fullscreen handler with overlay fallback
   async function handleFullscreen() {
+    const el = iframeRef.current ?? containerRef.current;
+    if (!el) return;
     try {
-      const el = iframeRef.current ?? containerRef.current;
-      if (!el) return;
-
-      const isFs = document.fullscreenElement
-        || (document as any).webkitFullscreenElement
-        || (document as any).mozFullScreenElement;
-
-      if (isFs) await exitFs();
-      else await requestFs(el);
-    } catch (e) {
-      console.warn('Fullscreen failed:', e);
+      // Try element fullscreen first
+      await requestFs(el);
+    } catch {
+      // Fallback: overlay (covers viewport even if FS API fails)
+      setOverlayFs(true);
     }
+  }
+
+  // GC_FIX(fullscreen): Exit fullscreen handler
+  async function handleExitFullscreen() {
+    setOverlayFs(false);
+    await exitFs();
   }
   
   // Open embed dialog
@@ -294,35 +316,57 @@ export default function GameDetail() {
   // Filter out the current game from related games
   const filteredRelatedGames = relatedGames?.filter((relatedGame) => relatedGame.id !== game.id) || [];
 
-  return (
-    <section className="py-10 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="mb-4 flex items-center">
-          <Button variant="outline" asChild className="flex items-center gap-1 font-medium">
-            <Link href="/">
-              <span className="material-icons text-sm">arrow_back</span>
-              <span>Back to games</span>
-            </Link>
-          </Button>
-        </div>
+  // GC_FIX(fullscreen): Game player component for reuse
+  const gamePlayer = (
+    <div 
+      ref={containerRef}
+      className="game-shell w-full md:w-3/4 bg-black rounded-lg overflow-hidden shadow-lg"
+    >
+      <iframe
+        ref={iframeRef}
+        src={`/api/games/${game.gameDir}/${game.entryFile}`}
+        title={`${game.title} - Play Game`}
+        allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+        allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
+        style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
+      ></iframe>
+    </div>
+  );
 
-        <div className="bg-card rounded-lg border border-border shadow-md overflow-hidden">
-          <div className="p-4 md:p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* GC_FIX(fullscreen): Element-based fullscreen container */}
-              <div 
-                ref={containerRef}
-                className="game-shell w-full md:w-3/4 bg-black rounded-lg overflow-hidden shadow-lg"
-              >
-                <iframe
-                  ref={iframeRef}
-                  src={`/api/games/${game.gameDir}/${game.entryFile}`}
-                  title={`${game.title} - Play Game`}
-                  allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
-                  allowFullScreen
-                  style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
-                ></iframe>
-              </div>
+  return (
+    <>
+      {/* GC_FIX(fullscreen): Overlay mode when active */}
+      {overlayFs ? (
+        <FullscreenGameOverlay onClose={handleExitFullscreen}>
+          <div className="game-shell game-shell--overlay">
+            <iframe
+              src={`/api/games/${game.gameDir}/${game.entryFile}`}
+              title={`${game.title} - Fullscreen Play`}
+              allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
+              style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
+            />
+          </div>
+        </FullscreenGameOverlay>
+      ) : (
+        <section className="py-10 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="mb-4 flex items-center">
+              <Button variant="outline" asChild className="flex items-center gap-1 font-medium">
+                <Link href="/">
+                  <span className="material-icons text-sm">arrow_back</span>
+                  <span>Back to games</span>
+                </Link>
+              </Button>
+            </div>
+
+            <div className="bg-card rounded-lg border border-border shadow-md overflow-hidden">
+              <div className="p-4 md:p-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* GC_FIX(fullscreen): Element-based fullscreen container */}
+                  {gamePlayer}
 
               {/* Game Info */}
               <div className="w-full md:w-1/4">
@@ -451,7 +495,9 @@ export default function GameDetail() {
             </div>
           </div>
         )}
-      </div>
+          </div>
+        </section>
+      )}
       
       {/* Embed Dialog */}
       <Dialog open={isEmbedDialogOpen} onOpenChange={setIsEmbedDialogOpen}>
@@ -493,6 +539,6 @@ export default function GameDetail() {
           </div>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }

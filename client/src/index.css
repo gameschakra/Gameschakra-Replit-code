@@ -114,15 +114,13 @@
   }
 }
 
-/* ===== GC_FIX: Element-based fullscreen for game container ===== */
+/* ===== GC_FIX: Element-based fullscreen with dvh + overlay fallback ===== */
 
 /* Normal layout size */
 .game-shell {
   position: relative;
-  aspect-ratio: 16 / 9;   /* adjust if needed */
+  aspect-ratio: 16 / 9;
   width: 100%;
-  max-width: 980px;       /* optional */
-  margin: 0 auto;
   background: #000;
 }
 
@@ -130,14 +128,13 @@
 .game-shell:fullscreen,
 .game-shell:-webkit-full-screen {
   position: fixed !important;
-  inset: 0 !important;          /* top/right/bottom/left = 0 */
+  inset: 0 !important;
   width: 100vw !important;
-  height: 100vh !important;
+  height: 100dvh !important; /* dvh for iOS Safari */
   z-index: 9999 !important;
   background: #000;
 }
 
-/* Ensure iframe fills shell */
 .game-shell:fullscreen > iframe,
 .game-shell:-webkit-full-screen > iframe {
   width: 100% !important;
@@ -145,7 +142,31 @@
   display: block;
 }
 
-/* Optional: prevent page scroll while FS */
-:fullscreen body { 
-  overflow: hidden; 
+/* GC_FIX: overlay fallback (portal) */
+.gc-fs-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;  /* dvh is key on mobile */
+  background: #000;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+}
+
+.game-shell--overlay {
+  width: 100vw;
+  height: 100dvh;
+}
+
+.game-shell--overlay > iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
+/* Ensure site header/footer don't sit above the overlay */
+header, .site-header, .site-footer { 
+  z-index: 10; 
 }

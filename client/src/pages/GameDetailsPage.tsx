@@ -287,8 +287,9 @@ export default function GameDetailsPage() {
                 src={iframeSrc}
                 className="w-full h-full border-0"
                 title={game.title}
-                allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+                allowFullScreen
+                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
                 loading="lazy"
               />
               <Button
@@ -399,8 +400,9 @@ export default function GameDetailsPage() {
                   src={iframeSrc}
                   className="w-full h-full border-0"
                   title={game.title}
-                  allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                  allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+                  allowFullScreen
+                  sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
                   loading="lazy"
                 />
                 <Button
