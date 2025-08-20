@@ -33,6 +33,22 @@ export default function GameDetail() {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [overlayFs, setOverlayFs] = useState(false);
+  
+  // Mobile detection hook
+  const [isSmall, setIsSmall] = useState<boolean>(() => 
+    window.matchMedia("(max-width: 768px)").matches
+  );
+  
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const onChange = () => setIsSmall(mql.matches);
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
+  }, []);
 
   // Get game details
   const {
@@ -199,15 +215,21 @@ export default function GameDetail() {
     };
   }, []);
 
-  // GC_FIX(fullscreen): Element fullscreen handler with overlay fallback
+  // GC_FIX(fullscreen): Mobile overlay-only, desktop element FS with fallback
   async function handleFullscreen() {
     const el = iframeRef.current ?? containerRef.current;
     if (!el) return;
+
+    if (isSmall) {
+      // MOBILE: overlay only (no Fullscreen API)
+      setOverlayFs(true);
+      return;
+    }
+    
+    // DESKTOP: element FS, fallback overlay
     try {
-      // Try element fullscreen first
       await requestFs(el);
     } catch {
-      // Fallback: overlay (covers viewport even if FS API fails)
       setOverlayFs(true);
     }
   }
@@ -215,7 +237,9 @@ export default function GameDetail() {
   // GC_FIX(fullscreen): Exit fullscreen handler
   async function handleExitFullscreen() {
     setOverlayFs(false);
-    await exitFs();
+    try {
+      await exitFs();
+    } catch {}
   }
   
   // Open embed dialog

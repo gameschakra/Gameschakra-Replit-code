@@ -70,12 +70,6 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://gameschakra.com/games/jumper</loc>
-    <lastmod>2025-08-19T11:27:29.403Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://gameschakra.com/games/stickman-fighter</loc>
     <lastmod>2025-08-19T19:29:25.057Z</lastmod>
     <changefreq>weekly</changefreq>
@@ -90,6 +84,12 @@
   <url>
     <loc>https://gameschakra.com/games/star-blaster</loc>
     <lastmod>2025-08-19T19:35:06.348Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/jumper</loc>
+    <lastmod>2025-08-19T11:27:29.403Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>

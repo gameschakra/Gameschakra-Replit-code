@@ -18,8 +18,25 @@ export default function GameDetailsPage() {
   const [, setLocation] = useLocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPlayButton, setShowPlayButton] = useState(true);
+  const [overlayFs, setOverlayFs] = useState(false);
   const gameFrameRef = useRef<HTMLIFrameElement>(null);
   const isMobile = window.innerWidth <= 768;
+  
+  // Mobile detection hook
+  const [isSmall, setIsSmall] = useState<boolean>(() => 
+    window.matchMedia("(max-width: 768px)").matches
+  );
+  
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const onChange = () => setIsSmall(mql.matches);
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
+  }, []);
 
   // Fetch game details
   const { data: game, isLoading, error } = useQuery<Game>({
@@ -56,21 +73,13 @@ export default function GameDetailsPage() {
       await apiRequest("POST", `/api/games/${game.id}/play`, {});
       setShowPlayButton(false);
       
-      // If on mobile, automatically go fullscreen after a short delay
+      // If on mobile, automatically go to overlay fullscreen after a short delay
       if (isMobile && gameFrameRef.current) {
         // Small delay to ensure iframe is loaded
         setTimeout(() => {
-          try {
-            if (gameFrameRef.current) {
-              gameFrameRef.current.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
-              });
-              setIsFullscreen(true);
-            }
-          } catch (err) {
-            console.error("Fullscreen error:", err);
-          }
-        }, 500);
+          setOverlayFs(true);      // Use overlay instead of requestFullscreen()
+          setIsFullscreen(true);
+        }, 300);
       }
     } catch (error) {
       console.error("Error recording play:", error);
@@ -106,13 +115,19 @@ export default function GameDetailsPage() {
 
   // Toggle fullscreen mode
   const toggleFullscreen = () => {
+    if (isSmall) {
+      // MOBILE: overlay only
+      setOverlayFs(prev => !prev);
+      setIsFullscreen(prev => !prev);
+      return;
+    }
+    
+    // DESKTOP: try element fullscreen, else overlay
     if (document.fullscreenElement) {
       document.exitFullscreen();
       setIsFullscreen(false);
     } else if (gameFrameRef.current) {
-      gameFrameRef.current.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
+      gameFrameRef.current.requestFullscreen().catch(() => setOverlayFs(true));
       setIsFullscreen(true);
     }
   };
@@ -130,29 +145,21 @@ export default function GameDetailsPage() {
     };
   }, []);
 
-  // Auto fullscreen on mobile when game starts
+  // Auto fullscreen on mobile when game starts - use overlay only
   useEffect(() => {
     if (isMobile && !showPlayButton && gameFrameRef.current) {
       // Small delay to ensure the iframe is fully loaded
       const timer = setTimeout(() => {
-        try {
-          if (document.fullscreenElement) return; // Already in fullscreen mode
-          
-          // Try to request fullscreen on the iframe only
-          gameFrameRef.current?.requestFullscreen().catch(err => {
-            console.error(`Error attempting iframe fullscreen: ${err}`);
-            // Note: No fallback to document fullscreen to avoid whole-page fullscreen
-          });
-          
+        if (isSmall) {
+          // Mobile: use overlay instead of native fullscreen
+          setOverlayFs(true);
           setIsFullscreen(true);
-        } catch (err) {
-          console.error(`Error attempting to enable fullscreen: ${err}`);
         }
       }, 1000);
       
       return () => clearTimeout(timer);
     }
-  }, [isMobile, showPlayButton]);
+  }, [isMobile, showPlayButton, isSmall]);
 
   // Handle back to home
   const handleBack = () => {
@@ -215,8 +222,32 @@ export default function GameDetailsPage() {
     : "";
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 md:py-8">
-      {/* Back button and actions - Mobile & Desktop */}
+    <>
+      {/* Mobile overlay fullscreen */}
+      {overlayFs && (
+        <div className="gc-fs-overlay">
+          <div className="game-shell game-shell--overlay">
+            <iframe
+              src={`/api/games/${game.gameDir}/${game.entryFile}`}
+              className="w-full h-full border-0"
+              title={game.title}
+              allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
+            />
+            <button
+              onClick={() => { setOverlayFs(false); setIsFullscreen(false); }}
+              className="absolute top-3 right-3 z-[10000] bg-black/60 text-white px-3 py-1 rounded"
+              aria-label="Close fullscreen"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="container mx-auto px-4 sm:px-6 py-4 md:py-8">
+        {/* Back button and actions - Mobile & Desktop */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <Button 
           variant="ghost" 
@@ -549,6 +580,7 @@ export default function GameDetailsPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
