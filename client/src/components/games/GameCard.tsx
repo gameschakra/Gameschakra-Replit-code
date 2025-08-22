@@ -129,16 +129,12 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
             </div>
           )}
           
-          {/* Play button overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black rounded-full p-4 transform scale-0 group-hover:scale-100 transition-all duration-500 shadow-lg hover:shadow-xl animate-pulse group-hover:animate-none">
-              <span className="material-icons text-3xl font-bold">play_arrow</span>
-            </div>
-          </div>
+          {/* Subtle overlay for better text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
 
-          {/* Quick Play Button - slides in from bottom */}
+          {/* Play Now Button - slides in from bottom */}
           <div className="absolute bottom-0 left-0 right-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-2 px-4 text-center hover:from-amber-600 hover:to-yellow-600 transition-all duration-300">
+            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 px-4 text-center hover:from-amber-600 hover:to-yellow-600 transition-all duration-300 shadow-lg">
               <span className="material-icons text-sm mr-1">play_circle</span>
               Play Now
             </div>
