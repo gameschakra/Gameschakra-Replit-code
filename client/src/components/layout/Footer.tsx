@@ -42,22 +42,22 @@ export default function Footer() {
               GamesChakra is a browser game platform that features free online HTML5 games. All games are unblocked and available to play instantly.
             </p>
             <div className="flex space-x-4 pt-2">
-              <a href="#" className="text-muted-foreground hover:text-blue-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Facebook">
+              <a href="#" className="text-muted-foreground hover:text-blue-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Facebook">
                 <FaFacebook />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-sky-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Twitter">
+              <a href="#" className="text-muted-foreground hover:text-sky-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Twitter">
                 <FaTwitter />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-indigo-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Discord">
+              <a href="#" className="text-muted-foreground hover:text-indigo-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Discord">
                 <FaDiscord />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-pink-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Instagram">
+              <a href="#" className="text-muted-foreground hover:text-pink-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Instagram">
                 <FaInstagram />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-green-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="WhatsApp">
+              <a href="#" className="text-muted-foreground hover:text-green-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="WhatsApp">
                 <FaWhatsapp />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-red-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="YouTube">
+              <a href="#" className="text-muted-foreground hover:text-red-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="YouTube">
                 <FaYoutube />
               </a>
             </div>
@@ -159,7 +159,7 @@ export default function Footer() {
           <div className="mt-4 md:mt-0">
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black px-3 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-amber-500/25 group hover:scale-105 hover:rotate-12"
+              className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black px-3 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-amber-500/25 group hover:scale-105 hover:rotate-12 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none"
               aria-label="Scroll to top"
             >
               <FaArrowUp className="text-sm transition-transform duration-300 group-hover:animate-bounce" />

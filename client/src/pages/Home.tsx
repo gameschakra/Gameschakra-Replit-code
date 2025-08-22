@@ -457,7 +457,7 @@ export default function Home() {
                 <nav className="space-y-1">
                   <Link 
                     href="/" 
-                    className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-300 group ${activeSection === 'all' ? 'bg-amber-500/20 text-amber-400 font-medium shadow-lg shadow-amber-500/10' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500 hover:shadow-md hover:shadow-amber-500/5'}`}
+                    className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none ${activeSection === 'all' ? 'bg-amber-500/20 text-amber-400 font-medium shadow-lg shadow-amber-500/10' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500 hover:shadow-md hover:shadow-amber-500/5'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('all'); setSelectedCategory(null)}}
                   >
                     <span className="material-icons mr-3 text-sm transition-all duration-300 group-hover:scale-110 group-hover:text-amber-400">home</span>

@@ -101,8 +101,8 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
   };
 
   return (
-    <div className="group challenge-thumbnail-fade-rtl relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-500 hover:border-amber-300 hover:-translate-y-2">
-      <a href={`/games/${game.slug}`} onClick={handleNavigate} className="block">
+    <div className="group challenge-thumbnail-fade-rtl relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-[0_10px_30px_rgba(255,184,0,.08)] transition-shadow duration-200 hover:border-amber-300 hover:-translate-y-2">
+      <a href={`/games/${game.slug}`} onClick={handleNavigate} className="block focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-lg outline-none">
         <div className="relative pb-[75%] overflow-hidden">
           {thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? (
             <div className="absolute inset-0 w-full h-full group-hover:scale-110 transition-transform duration-700">
@@ -179,7 +179,7 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
       
       {/* Favorite button */}
       <button 
-        className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full ${isFavorite ? 'bg-white text-primary' : 'bg-white/80 text-gray-400 hover:text-primary'} transition-colors shadow-sm hover:shadow-md`}
+        className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full ${isFavorite ? 'bg-white text-primary' : 'bg-white/80 text-gray-400 hover:text-primary'} transition-colors shadow-sm hover:shadow-md focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none`}
         onClick={toggleFavorite}
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >

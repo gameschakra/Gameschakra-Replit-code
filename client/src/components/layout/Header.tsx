@@ -71,8 +71,15 @@ export default function Header() {
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between h-16 max-w-full">
         {/* Logo */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center">
-            <span className="font-title font-bold text-2xl text-white">GAMES<span className="text-amber-500">CHAKRA</span></span>
+          <Link href="/" className="flex items-center focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-md outline-none">
+            {/* Compact Logo Mark */}
+            <div className="h-6 w-6 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-md flex items-center justify-center mr-2 shadow-md">
+              <span className="material-icons text-black text-sm font-bold">sports_esports</span>
+            </div>
+            {/* Wordmark - hidden on xs, visible on sm+ */}
+            <span className="hidden sm:inline font-title font-bold text-2xl text-white">
+              GAMES<span className="text-amber-500">CHAKRA</span>
+            </span>
           </Link>
         </div>
 
@@ -86,24 +93,24 @@ export default function Header() {
 
         {/* Main Navigation */}
         <nav className="hidden md:flex space-x-6 h-16 items-center">
-          <Link href="/" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+          <Link href="/" className="relative text-white hover:text-amber-500 transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none">
             <span className="relative z-10">Games</span>
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
-          <Link href="/?section=active-challenges" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+          <Link href="/?section=active-challenges" className="relative text-white hover:text-amber-500 transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none">
             <span className="relative z-10">Leaderboard</span>
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
-          <Link href="/blog" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+          <Link href="/blog" className="relative text-white hover:text-amber-500 transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none">
             <span className="relative z-10">Blog</span>
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
 
-          <Link href="/developers" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md font-medium flex items-center transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105">
+          <Link href="/developers" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md font-medium flex items-center transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
             <span className="material-icons mr-1 text-sm">code</span>
             Dev Portal
           </Link>
-          <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105">
+          <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
             <Link href="/login">Log In</Link>
           </Button>
         </nav>
@@ -114,7 +121,7 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="p-1 text-white hover:text-amber-500 hover:bg-transparent"
+            className="p-1 text-white hover:text-amber-500 hover:bg-transparent focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none"
             onClick={() => setShowMobileSearch(!showMobileSearch)}
           >
             <span className="material-icons">{showMobileSearch ? "close" : "search"}</span>
@@ -124,7 +131,7 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="p-1 text-white hover:text-amber-500 hover:bg-transparent"
+            className="p-1 text-white hover:text-amber-500 hover:bg-transparent focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <span className="material-icons">{mobileMenuOpen ? "close" : "menu"}</span>

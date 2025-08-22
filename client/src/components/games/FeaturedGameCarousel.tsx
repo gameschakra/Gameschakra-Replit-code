@@ -198,7 +198,7 @@ export default function FeaturedGameCarousel() {
             size="icon" 
             onClick={prevSlide}
             disabled={currentSlide === 0 || isTransitioning}
-            className="hidden md:flex absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="hidden md:flex absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none"
           >
             <span className="material-icons">chevron_left</span>
           </Button>
@@ -207,7 +207,7 @@ export default function FeaturedGameCarousel() {
             size="icon" 
             onClick={nextSlide}
             disabled={currentSlide === totalSlides - 1 || isTransitioning}
-            className="hidden md:flex absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="hidden md:flex absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none"
           >
             <span className="material-icons">chevron_right</span>
           </Button>
@@ -218,10 +218,10 @@ export default function FeaturedGameCarousel() {
               {[...Array(totalSlides)].map((_, index) => (
                 <button 
                   key={index}
-                  className={`w-3 h-3 md:w-2 md:h-2 rounded-full transition-all duration-300 ${
+                  className={`w-3 h-3 md:w-2 md:h-2 rounded-full transition-all duration-300 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none ${
                     index === currentSlide 
-                      ? 'bg-amber-500 scale-125 shadow-lg shadow-amber-500/50' 
-                      : 'bg-gray-600 hover:bg-gray-500 hover:scale-110'
+                      ? 'bg-amber-500 opacity-80 scale-125 shadow-lg shadow-amber-500/50' 
+                      : 'bg-gray-400 opacity-40 hover:bg-gray-300 hover:opacity-60 hover:scale-110'
                   }`}
                   onClick={() => {
                     if (!isTransitioning) {

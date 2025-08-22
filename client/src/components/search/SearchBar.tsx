@@ -55,7 +55,7 @@ export default function SearchBar({
         type="button"
         onClick={() => doNavigate(value)}
         aria-label="Submit search"
-        className="absolute right-2 top-0 bottom-0 flex items-center text-gray-300 hover:text-amber-400"
+        className="absolute right-2 top-0 bottom-0 flex items-center justify-center text-gray-300 hover:text-amber-400 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none transition-colors duration-200"
       >
         <span className="material-icons text-xl">search</span>
       </button>
