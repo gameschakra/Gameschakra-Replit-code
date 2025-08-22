@@ -6,10 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PlaceholderImage } from "@/components/ui/placeholder-image";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 export default function FeaturedGameCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [totalSlides, setTotalSlides] = useState(3);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // Get featured games
@@ -39,13 +41,27 @@ export default function FeaturedGameCarousel() {
 
   // Navigate to previous slide
   const prevSlide = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
     setCurrentSlide((prev) => (prev > 0 ? prev - 1 : 0));
+    setTimeout(() => setIsTransitioning(false), 500);
   };
 
   // Navigate to next slide
   const nextSlide = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
     setCurrentSlide((prev) => (prev < totalSlides - 1 ? prev + 1 : prev));
+    setTimeout(() => setIsTransitioning(false), 500);
   };
+
+  // Touch gesture support
+  const swipeRef = useSwipeGesture<HTMLDivElement>({
+    onSwipeLeft: nextSlide,
+    onSwipeRight: prevSlide,
+    threshold: 50,
+    preventDefaultTouchmove: true
+  });
 
   // Update the carousel position when current slide changes
   useEffect(() => {
@@ -99,11 +115,14 @@ export default function FeaturedGameCarousel() {
         </div>
         
         {/* Carousel Container */}
-        <div className="relative">
+        <div className="relative carousel-container" ref={swipeRef}>
+          {/* Touch gesture overlay for mobile */}
+          <div className="absolute inset-0 z-10 touch-pan-y md:hidden" />
+          
           {/* Carousel Track */}
           <div 
             ref={carouselRef}
-            className="flex transition-transform duration-500" 
+            className="flex transition-transform duration-500 ease-out carousel-track" 
             style={{ transform: `translateX(-${currentSlide * (100 / totalSlides)}%)` }}
           >
             {featuredGames.map((game) => (
@@ -173,13 +192,13 @@ export default function FeaturedGameCarousel() {
             ))}
           </div>
           
-          {/* Navigation Arrows */}
+          {/* Navigation Arrows - Hidden on mobile for touch gestures */}
           <Button 
             variant="outline" 
             size="icon" 
             onClick={prevSlide}
-            disabled={currentSlide === 0}
-            className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-opacity text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50"
+            disabled={currentSlide === 0 || isTransitioning}
+            className="hidden md:flex absolute top-1/2 left-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <span className="material-icons">chevron_left</span>
           </Button>
@@ -187,8 +206,8 @@ export default function FeaturedGameCarousel() {
             variant="outline" 
             size="icon" 
             onClick={nextSlide}
-            disabled={currentSlide === totalSlides - 1}
-            className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-opacity text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50"
+            disabled={currentSlide === totalSlides - 1 || isTransitioning}
+            className="hidden md:flex absolute top-1/2 right-2 transform -translate-y-1/2 bg-gray-900/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-700 opacity-75 hover:opacity-100 transition-all duration-300 text-white hover:bg-gray-800/70 hover:text-white hover:border-amber-500/50 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <span className="material-icons">chevron_right</span>
           </Button>
@@ -199,13 +218,32 @@ export default function FeaturedGameCarousel() {
               {[...Array(totalSlides)].map((_, index) => (
                 <button 
                   key={index}
-                  className={`w-2 h-2 rounded-full transition-colors ${index === currentSlide ? 'bg-amber-500' : 'bg-gray-600 hover:bg-gray-500'}`}
-                  onClick={() => setCurrentSlide(index)}
+                  className={`w-3 h-3 md:w-2 md:h-2 rounded-full transition-all duration-300 ${
+                    index === currentSlide 
+                      ? 'bg-amber-500 scale-125 shadow-lg shadow-amber-500/50' 
+                      : 'bg-gray-600 hover:bg-gray-500 hover:scale-110'
+                  }`}
+                  onClick={() => {
+                    if (!isTransitioning) {
+                      setIsTransitioning(true);
+                      setCurrentSlide(index);
+                      setTimeout(() => setIsTransitioning(false), 500);
+                    }
+                  }}
+                  disabled={isTransitioning}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
             </div>
           )}
+          
+          {/* Mobile swipe indicator */}
+          <div className="md:hidden text-center mt-2">
+            <p className="text-xs text-gray-400 flex items-center justify-center">
+              <span className="material-icons text-sm mr-1">swipe</span>
+              Swipe to browse games
+            </p>
+          </div>
         </div>
       </div>
     </section>
