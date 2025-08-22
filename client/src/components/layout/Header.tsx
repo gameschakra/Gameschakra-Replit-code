@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/search/SearchBar";
+import AdvancedFilters from "@/components/search/AdvancedFilters";
+import MobileNavCategories from "@/components/navigation/MobileNavCategories";
 
 export default function Header() {
   const [location, navigate] = useLocation();
@@ -74,28 +76,34 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Desktop Search Bar */}
-        <div className="hidden md:block flex-1 max-w-md mx-6">
-          <SearchBar />
+        {/* SEARCH_REFACTOR: Desktop Search Bar with Advanced Filters */}
+        <div className="hidden md:flex flex-1 max-w-lg mx-6">
+          <div className="flex w-full gap-2 backdrop-blur-md bg-white/5 border border-white/10 rounded-lg p-1">
+            <SearchBar placeholder="Search games..." size="md" className="flex-1" />
+            <AdvancedFilters />
+          </div>
         </div>
 
         {/* Main Navigation */}
         <nav className="hidden md:flex space-x-6 h-16 items-center">
-          <Link href="/" className="text-white hover:text-amber-500 transition-colors">
-            Games
+          <Link href="/" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+            <span className="relative z-10">Games</span>
+            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
-          <Link href="/?section=active-challenges" className="text-white hover:text-amber-500 transition-colors">
-            Leaderboard
+          <Link href="/?section=active-challenges" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+            <span className="relative z-10">Leaderboard</span>
+            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
-          <Link href="/blog" className="text-white hover:text-amber-500 transition-colors">
-            Blog
+          <Link href="/blog" className="relative text-white hover:text-amber-500 transition-all duration-300 group">
+            <span className="relative z-10">Blog</span>
+            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
 
-          <Link href="/developers" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md font-medium flex items-center">
+          <Link href="/developers" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md font-medium flex items-center transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105">
             <span className="material-icons mr-1 text-sm">code</span>
             Dev Portal
           </Link>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-black font-medium">
+          <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105">
             <Link href="/login">Log In</Link>
           </Button>
         </nav>
@@ -132,10 +140,16 @@ export default function Header() {
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 max-w-[100vw]">
-          <SearchBar 
-            isMobile={true} 
-            onClose={() => setShowMobileSearch(false)} 
-          />
+          {/* SEARCH_REFACTOR: Mobile Search Bar with Advanced Filters */}
+          <div className="flex w-full gap-2">
+            <SearchBar 
+              placeholder="Search games..." 
+              size="md" 
+              className="flex-1"
+              autoFocus={true}
+            />
+            <AdvancedFilters />
+          </div>
         </div>
       </div>
 
@@ -208,40 +222,8 @@ export default function Header() {
                 </div>
               </Link>
               
-              <div className="py-2 px-3 text-gray-400 uppercase text-xs font-semibold mt-4">
-                Categories
-              </div>
-
-              <Link
-                href="/?category=action"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">flash_on</span>
-                  <span>Action</span>
-                </div>
-              </Link>
-              <Link
-                href="/?category=puzzle"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">extension</span>
-                  <span>Puzzle</span>
-                </div>
-              </Link>
-              <Link
-                href="/?category=adventure"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">explore</span>
-                  <span>Adventure</span>
-                </div>
-              </Link>
+              {/* GC_FIX: Use dynamic categories from /api/categories */}
+              <MobileNavCategories onLinkClick={() => setMobileMenuOpen(false)} />
             </nav>
           </div>
           

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Game } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { toItemsArray } from "@/lib/normalize";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,15 +73,14 @@ export default function AdminFeaturedGames() {
   };
 
   // Filter non-featured games based on search term
-  const filteredGames = publishedGames
-    ? publishedGames
-        .filter((game) => !game.isFeatured)
-        .filter(
-          (game) =>
-            game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()))
-        )
-    : [];
+  const publishedGamesList = toItemsArray<Game>(publishedGames);
+  const filteredGames = publishedGamesList
+    .filter((game) => !game.isFeatured)
+    .filter(
+      (game) =>
+        game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   // Handle drag end
   const handleDragEnd = (result: DropResult) => {
@@ -162,7 +162,7 @@ export default function AdminFeaturedGames() {
                   ref={provided.innerRef}
                   className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                 >
-                  {featuredGames?.map((game, index) => (
+                  {toItemsArray<Game>(featuredGames).map((game, index) => (
                     <Draggable key={game.id} draggableId={game.id.toString()} index={index}>
                       {(provided) => (
                         <Card

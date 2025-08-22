@@ -94,3 +94,6 @@ export interface Challenge {
   updatedAt: string;
   game?: Game;
 }
+
+// GC_FIX(normalize)
+export type GamesApiResponse = { items: Game[]; total: number; page: number } | Game[];

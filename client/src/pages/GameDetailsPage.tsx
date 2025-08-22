@@ -12,6 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
 import GameCard from "@/components/games/GameCard";
+// GC_UX: Enhanced fullscreen overlay with UX improvements
+import FullscreenGameOverlay from "@/components/games/FullscreenGameOverlay";
+// GC_SEO: Import new centralized SEO utilities
+import { 
+  applyMeta, 
+  injectJsonLd, 
+  clearJsonLd, 
+  generateBreadcrumbJsonLd, 
+  generateGameJsonLd, 
+  getBaseUrl 
+} from "@/lib/seo";
 
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -63,6 +74,67 @@ export default function GameDetailsPage() {
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
+
+  // GC_SEO: Set up SEO when game data loads
+  useEffect(() => {
+    if (game) {
+      const baseUrl = getBaseUrl();
+      const pageUrl = `${baseUrl}/games/${game.slug}`;
+      const imageUrl = getThumbnailSrc(game);
+      
+      // GC_SEO: Apply comprehensive meta tags with OG and Twitter cards
+      applyMeta({
+        title: `${game.title} – Play Online | GamesChakra`,
+        description: game.description || `Play ${game.title} free on GamesChakra. No downloads required, play instantly in your browser!`,
+        canonical: pageUrl,
+        og: {
+          'og:type': 'website',
+          'og:title': `${game.title} – Play Online | GamesChakra`,
+          'og:description': game.description || `Play ${game.title} free on GamesChakra.`,
+          'og:url': pageUrl,
+          'og:image': imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`
+        },
+        twitter: {
+          'twitter:card': 'summary_large_image',
+          'twitter:title': `${game.title} – Play Online | GamesChakra`,
+          'twitter:description': game.description || `Play ${game.title} free on GamesChakra.`,
+          'twitter:image': imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`
+        }
+      });
+      
+      // GC_SEO: Generate BreadcrumbList JSON-LD
+      const breadcrumbItems = [
+        { name: 'Home', url: '/' },
+        ...(game.category ? [{ name: game.category.name, url: `/category/${game.category.slug}` }] : []),
+        { name: game.title, url: `/games/${game.slug}` }
+      ];
+      
+      const breadcrumbJsonLd = generateBreadcrumbJsonLd(breadcrumbItems);
+      injectJsonLd('gc-breadcrumb', breadcrumbJsonLd);
+      
+      // GC_SEO: Generate Game JSON-LD
+      const gameJsonLd = generateGameJsonLd({
+        name: game.title,
+        description: game.description || `Play ${game.title} free online`,
+        image: imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`,
+        url: pageUrl,
+        author: game.developer || 'GamesChakra',
+        ...(game.rating && game.ratingCount && game.ratingCount > 0 && {
+          aggregateRating: {
+            ratingValue: game.rating,
+            ratingCount: game.ratingCount
+          }
+        })
+      });
+      
+      injectJsonLd('gc-game', gameJsonLd);
+    }
+    
+    // GC_SEO: Cleanup on unmount
+    return () => {
+      clearJsonLd(['gc-breadcrumb', 'gc-game']);
+    };
+  }, [game]);
 
   // Handle play game - track analytics and enable fullscreen on mobile
   const handlePlayGame = async () => {
@@ -223,9 +295,12 @@ export default function GameDetailsPage() {
 
   return (
     <>
-      {/* Mobile overlay fullscreen */}
+      {/* GC_UX: Enhanced fullscreen overlay with UX improvements */}
       {overlayFs && (
-        <div className="gc-fs-overlay">
+        <FullscreenGameOverlay 
+          onClose={() => { setOverlayFs(false); setIsFullscreen(false); }}
+          showExitButton={true}
+        >
           <div className="game-shell game-shell--overlay">
             <iframe
               src={`/api/games/${game.gameDir}/${game.entryFile}`}
@@ -235,15 +310,8 @@ export default function GameDetailsPage() {
               allowFullScreen
               sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
             />
-            <button
-              onClick={() => { setOverlayFs(false); setIsFullscreen(false); }}
-              className="absolute top-3 right-3 z-[10000] bg-black/60 text-white px-3 py-1 rounded"
-              aria-label="Close fullscreen"
-            >
-              ✕
-            </button>
           </div>
-        </div>
+        </FullscreenGameOverlay>
       )}
       
       <div className="container mx-auto px-4 sm:px-6 py-4 md:py-8">

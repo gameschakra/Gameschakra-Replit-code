@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Game } from "@/types";
+import { toItemsArray } from "@/lib/normalize";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -215,13 +216,12 @@ export default function AdminGamesList() {
   };
 
   // Filter games based on search term
-  const filteredGames = games
-    ? games.filter(
-        (game) =>
-          game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : [];
+  const gamesList = toItemsArray<Game>(games);
+  const filteredGames = gamesList.filter(
+    (game) =>
+      game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   // Paginate games
   const paginatedGames = filteredGames.slice(

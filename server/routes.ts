@@ -457,17 +457,20 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   });
 
   // GC_FIX: Enhanced game routes with improved search/filter functionality
+  // GC_FIX(category-filter): add category filtering to GET /api/games
   api.get("/games", async (req: Request, res: Response) => {
     try {
       const { 
-        limit = 50,
+        limit = 24,
+        page = 1,
         offset = 0, 
         category, 
         categoryId: directCategoryId,
+        categorySlug, // GC_FIX(category-filter): new categorySlug param
         status, 
         featured, 
         q, query, search,
-        sort = "newest", // GC_FIX: Add default sort
+        sort = "recent", // GC_FIX: Add default sort
         rating,
         dateFilter,
         date
@@ -476,29 +479,45 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       // GC_FIX: tolerate multiple param names for search
       const termRaw = (q ?? query ?? search ?? '').toString().trim();
       
-      // Parse categoryId from either 'category' or 'categoryId' params
-      const categoryId = directCategoryId ? Number(directCategoryId) : 
-                        (category ? Number(category) : undefined);
+      // GC_FIX(category-filter): Parse categoryId from multiple sources
+      let categoryId = directCategoryId ? Number(directCategoryId) : 
+                      (category ? Number(category) : undefined);
       
       const isFeatured = featured === "true" ? true : 
                         featured === "false" ? false : 
                         undefined;
       
-      const games = await storage.getGames({
-        limit: Number(limit),
-        offset: Number(offset),
+      // GC_FIX(category-filter): Calculate pagination
+      const pageNum = Number(page);
+      const limitNum = Number(limit);
+      const offsetNum = offset ? Number(offset) : (pageNum - 1) * limitNum;
+      
+      // GC_FIX: Use gameService for better categorySlug support
+      const result = await gameService.listGames({
+        limit: limitNum,
+        offset: offsetNum,
         categoryId,
+        categorySlug: categorySlug as string,
         status: status as "draft" | "published" | undefined,
         featured: isFeatured,
         search: termRaw,
-        sort: sort as string, // GC_FIX: Pass sort parameter
+        sort: sort as string,
         rating: rating as string,
         dateFilter: (dateFilter || date) as string
       });
       
-      res.json(games);
+      const games = result.rows;
+      const totalGames = result.total;
+      
+      // GC_FIX(category-filter): Return in expected format { items, total, page }
+      res.json({ 
+        items: games, 
+        total: totalGames, 
+        page: pageNum 
+      });
     } catch (error) {
-      res.status(500).json({ message: `Error fetching games: ${error.message}` });
+      console.error("GET /api/games error", error);
+      res.status(500).json({ message: "Failed to fetch games" });
     }
   });
 
@@ -1359,23 +1378,26 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   
   app.use("/api", api);
 
-  // Serve sitemap.xml
+  // GC_SEO: Serve dynamic sitemap.xml with proper headers and caching
   app.get('/sitemap.xml', async (req: Request, res: Response) => {
     try {
-      // Get the base URL from the request
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.headers.host;
+      // Get the base URL from the request with fallback
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const host = req.headers.host || 'gameschakra.com';
       const baseUrl = `${protocol}://${host}`;
       
       // Generate sitemap XML
       const sitemap = await generateSitemap(baseUrl);
       
-      // Set appropriate headers
-      res.header('Content-Type', 'application/xml');
+      // GC_SEO: Set appropriate headers for XML sitemap
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.header('Cache-Control', 'public, max-age=600'); // 10 minutes cache
+      res.header('X-Robots-Tag', 'noindex'); // Don't index the sitemap itself
+      
       res.send(sitemap);
     } catch (error) {
       console.error('Error generating sitemap:', error);
-      res.status(500).send('Error generating sitemap');
+      res.status(500).header('Content-Type', 'text/plain').send('Error generating sitemap');
     }
   });
 

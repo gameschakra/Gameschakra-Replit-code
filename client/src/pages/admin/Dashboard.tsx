@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Game, Category, User } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { extractArray } from "@/lib/normalize"; // GC_SAFE_NORMALIZE
 import { Redirect, Link, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import EditGameModal from "@/components/admin/EditGameModal";
+import AdminCategoriesList from "@/components/admin/AdminCategoriesList";
 import {
   Table,
   TableBody,
@@ -77,6 +79,11 @@ export default function Dashboard() {
     queryKey: ["/api/challenges"],
     enabled: user?.isAdmin,
   });
+
+  // GC_SAFE_NORMALIZE - Extract arrays from potentially wrapped responses
+  const gamesArr = extractArray<Game>(games);
+  const categoriesArr = extractArray<Category>(categories);
+  const challengesArr = extractArray<any>(challenges);
 
   // Upload new game mutation
   const uploadGameMutation = useMutation({
@@ -438,7 +445,8 @@ export default function Dashboard() {
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#232a40] border-[#2d3754] text-white">
-                        {categories?.map((category) => (
+                        {/* GC_SAFE_NORMALIZE */}
+                        {categoriesArr.map((category) => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             {category.name}
                           </SelectItem>
@@ -548,7 +556,7 @@ export default function Dashboard() {
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                 </div>
-              ) : games && games.length > 0 ? (
+              ) : gamesArr.length > 0 ? ( // GC_SAFE_NORMALIZE
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-[#1A2134]">
@@ -561,7 +569,8 @@ export default function Dashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {games.map((game) => (
+                      {/* GC_SAFE_NORMALIZE */}
+                      {gamesArr.map((game) => (
                         <TableRow key={game.id} className="hover:bg-[#1A2134] text-white">
                           <TableCell className="font-medium">{game.title}</TableCell>
                           <TableCell>{game.category?.name || "Unknown"}</TableCell>
@@ -641,93 +650,9 @@ export default function Dashboard() {
                       </TabsContent>
           
           <TabsContent value="categories" className="space-y-8">
-                        {/* Add New Category Form */}
-            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
-              <h2 className="text-xl font-title font-bold mb-4 text-white">Add New Category</h2>
-              <form id="categoryForm" onSubmit={handleCategorySubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
-                    Category Name
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    required
-                    className="bg-[#1A2134] border-[#2d3754] text-white"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-                    Description
-                  </label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    className="min-h-[80px] bg-[#1A2134] border-[#2d3754] text-white"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    className="bg-primary hover:bg-primary/90"
-                    disabled={createCategoryMutation.isPending}
-                  >
-                    {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-            
-            {/* Categories List */}
-            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
-              <h2 className="text-xl font-title font-bold mb-4 text-white">Categories List</h2>
-              {categoriesLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : categories && categories.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-[#1A2134]">
-                      <TableRow>
-                        <TableHead className="text-gray-300">Name</TableHead>
-                        <TableHead className="text-gray-300">Slug</TableHead>
-                        <TableHead className="text-gray-300">Games</TableHead>
-                        <TableHead className="text-right text-gray-300">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {categories.map((category) => (
-                        <TableRow key={category.id} className="hover:bg-[#1A2134] text-white">
-                          <TableCell className="font-medium">{category.name}</TableCell>
-                          <TableCell>{category.slug}</TableCell>
-                          <TableCell>{category.gameCount}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedCategory(category);
-                                confirmCategoryDelete();
-                              }}
-                              disabled={category.gameCount > 0}
-                              className="bg-red-500/30 hover:bg-red-500/50 text-white"
-                            >
-                              Delete
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <p className="text-gray-400 text-center py-4">No categories found.</p>
-              )}
-            </div>
-                      </TabsContent>
+            {/* Use the dedicated AdminCategoriesList component which has full Edit functionality */}
+            <AdminCategoriesList />
+          </TabsContent>
 
           <TabsContent value="challenges" className="space-y-8">
                         {/* Add New Challenge Form */}
@@ -810,7 +735,8 @@ export default function Dashboard() {
                       </SelectTrigger>
                       <SelectContent className="bg-[#232a40] border-[#2d3754] text-white">
                         <SelectItem value="none">None</SelectItem>
-                        {games?.map((game) => (
+                        {/* GC_SAFE_NORMALIZE */}
+                        {gamesArr.map((game) => (
                           <SelectItem key={game.id} value={game.id.toString()}>
                             {game.title}
                           </SelectItem>
@@ -937,8 +863,8 @@ export default function Dashboard() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : challenges && challenges.length > 0 ? (
-                      challenges.map((challenge) => (
+                    ) : challengesArr.length > 0 ? ( // GC_SAFE_NORMALIZE
+                      challengesArr.map((challenge) => (
                         <TableRow key={challenge.id} className="hover:bg-[#1A2134] text-white">
                           <TableCell className="font-medium">{challenge.title}</TableCell>
                           <TableCell>

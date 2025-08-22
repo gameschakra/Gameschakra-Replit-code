@@ -9,8 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getAverageRating, generateStarRating } from "@/lib/utils";
 import GameCard from "@/components/games/GameCard";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { updateMetaTags, resetMetaTags } from "@/lib/metaService";
-import { generateGameSchema } from "@/lib/schemaGenerator";
+// GC_SEO: Import new centralized SEO utilities
+import { 
+  applyMeta, 
+  injectJsonLd, 
+  clearJsonLd, 
+  generateBreadcrumbJsonLd, 
+  generateGameJsonLd, 
+  getBaseUrl 
+} from "@/lib/seo";
 import { 
   Dialog,
   DialogContent,
@@ -114,62 +121,69 @@ export default function GameDetail() {
     },
   });
 
-  // Track game play when component mounts
+  // GC_SEO: Track game play and set up SEO when component mounts
   useEffect(() => {
     if (game) {
       trackPlayMutation.mutate();
       
-      // Update meta tags when game details are loaded
-      updateMetaTags({
-        title: game.title,
-        description: game.description || `Play ${game.title} on GamesChakra - Free HTML5 Games!`,
-        imageUrl: game.thumbnailPath ? `/api/thumbnails/${game.thumbnailPath}` : undefined,
-        canonicalUrl: `https://gameschakra.com/games/${game.slug}`,
-        type: 'game'
+      // GC_SEO: Build URLs for meta tags and structured data
+      const baseUrl = getBaseUrl();
+      const pageUrl = `${baseUrl}/games/${game.slug}`;
+      const imageUrl = game.thumbnailPath 
+        ? `${baseUrl}/api/games/${game.gameDir}/${game.thumbnailPath}` 
+        : undefined;
+      
+      // GC_SEO: Apply comprehensive meta tags with OG and Twitter cards
+      applyMeta({
+        title: `${game.title} – Play Online | GamesChakra`,
+        description: game.description || `Play ${game.title} free on GamesChakra. No downloads required, play instantly in your browser!`,
+        canonical: pageUrl,
+        og: {
+          'og:type': 'website',
+          'og:title': `${game.title} – Play Online | GamesChakra`,
+          'og:description': game.description || `Play ${game.title} free on GamesChakra.`,
+          'og:url': pageUrl,
+          ...(imageUrl && { 'og:image': imageUrl })
+        },
+        twitter: {
+          'twitter:card': 'summary_large_image',
+          'twitter:title': `${game.title} – Play Online | GamesChakra`,
+          'twitter:description': game.description || `Play ${game.title} free on GamesChakra.`,
+          ...(imageUrl && { 'twitter:image': imageUrl })
+        }
       });
       
-      // Add structured data schema for SEO
-      const imageUrl = game.thumbnailPath ? `https://gameschakra.com/api/thumbnails/${game.thumbnailPath}` : undefined;
+      // GC_SEO: Generate BreadcrumbList JSON-LD
+      const breadcrumbItems = [
+        { name: 'Home', url: '/' },
+        ...(game.category ? [{ name: game.category.name, url: `/category/${game.category.slug}` }] : []),
+        { name: game.title, url: `/games/${game.slug}` }
+      ];
       
-      // Convert Game type to the type expected by schemaGenerator
-      const gameForSchema = {
-        ...game,
-        thumbnailUrl: game.thumbnailPath,
-        developer: 'GamesChakra',
-        rating: 4.5,
-        ratingCount: 100
-      };
+      const breadcrumbJsonLd = generateBreadcrumbJsonLd(breadcrumbItems);
+      injectJsonLd('gc-breadcrumb', breadcrumbJsonLd);
       
-      const schemaData = generateGameSchema({
-        game: gameForSchema as any,
-        url: `https://gameschakra.com/games/${game.slug}`,
-        imageUrl
+      // GC_SEO: Generate Game JSON-LD with all available data
+      const gameJsonLd = generateGameJsonLd({
+        name: game.title,
+        description: game.description || `Play ${game.title} free online`,
+        image: imageUrl,
+        url: pageUrl,
+        author: game.developer || game.user?.username,
+        ...(game.rating && game.ratingCount && game.ratingCount > 0 && {
+          aggregateRating: {
+            ratingValue: game.rating,
+            ratingCount: game.ratingCount
+          }
+        })
       });
       
-      // Add schema to the page
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.id = 'game-schema';
-      script.textContent = JSON.stringify(schemaData);
-      
-      // Remove any existing schema
-      const existingSchema = document.getElementById('game-schema');
-      if (existingSchema) {
-        existingSchema.remove();
-      }
-      
-      document.head.appendChild(script);
+      injectJsonLd('gc-game', gameJsonLd);
     }
     
-    // Reset meta tags and remove schema on unmount
+    // GC_SEO: Cleanup on unmount
     return () => {
-      if (game) {
-        resetMetaTags();
-        const existingSchema = document.getElementById('game-schema');
-        if (existingSchema) {
-          existingSchema.remove();
-        }
-      }
+      clearJsonLd(['gc-breadcrumb', 'gc-game']);
     };
   }, [game]);
 
@@ -360,9 +374,12 @@ export default function GameDetail() {
 
   return (
     <>
-      {/* GC_FIX(fullscreen): Overlay mode when active */}
+      {/* GC_UX: Enhanced fullscreen overlay with UX improvements */}
       {overlayFs ? (
-        <FullscreenGameOverlay onClose={handleExitFullscreen}>
+        <FullscreenGameOverlay 
+          onClose={handleExitFullscreen}
+          showExitButton={true}
+        >
           <div className="game-shell game-shell--overlay">
             <iframe
               src={`/api/games/${game.gameDir}/${game.entryFile}`}
@@ -513,8 +530,8 @@ export default function GameDetail() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredRelatedGames.slice(0, 4).map((relatedGame) => (
-                <GameCard key={relatedGame.id} game={relatedGame} isCompact />
+              {filteredRelatedGames.slice(0, 4).map((relatedGame, index) => (
+                <GameCard key={relatedGame.id} game={relatedGame} isCompact priority={index === 0} />
               ))}
             </div>
           </div>

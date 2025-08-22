@@ -1,10 +1,11 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlaceholderImage } from "@/components/ui/placeholder-image";
 
 export default function GameCategories() {
+  const [location] = useLocation();
   const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
@@ -36,12 +37,16 @@ export default function GameCategories() {
         <h2 className="text-2xl font-title font-bold mb-6">Game Categories</h2>
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map(category => (
-            <Link 
-              key={category.id} 
-              href={`/?category=${category.slug}`}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
-            >
+          {categories.map(category => {
+            const isActive = location === `/category/${category.slug}`;
+            return (
+              <Link 
+                key={category.id} 
+                href={`/category/${category.slug}`}
+                className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group ${
+                  isActive ? 'ring-2 ring-blue-500 shadow-xl' : ''
+                }`}
+              >
               <div className="relative pb-[75%]">
                 {category.imageUrl ? (
                   <img 
@@ -64,7 +69,8 @@ export default function GameCategories() {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

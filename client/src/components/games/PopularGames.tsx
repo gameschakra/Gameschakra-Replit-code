@@ -54,8 +54,8 @@ export default function PopularGames() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {popularGames.map(game => (
-            <GameCard key={game.id} game={game} />
+          {popularGames.map((game, index) => (
+            <GameCard key={game.id} game={game} priority={index === 0} />
           ))}
         </div>
       </div>

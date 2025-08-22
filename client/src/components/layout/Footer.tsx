@@ -27,34 +27,37 @@ export default function Footer() {
       <div className="container mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="space-y-4 md:col-span-2">
-            <div className="flex items-center space-x-2">
-              <img 
-                src="/assets/logo.png" 
-                alt="GamesChakra Logo" 
-                className="h-16 w-auto" 
-              />
-              <span className="font-title font-bold text-xl text-foreground">GamesChakra</span>
+            <div className="flex items-center space-x-2 group">
+              <div className="relative">
+                <img 
+                  src="/assets/logo.png" 
+                  alt="GamesChakra Logo" 
+                  className="h-16 w-auto transition-all duration-300 group-hover:scale-110" 
+                />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-md"></div>
+              </div>
+              <span className="font-title font-bold text-xl text-foreground group-hover:text-amber-400 transition-colors duration-300">GamesChakra</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               GamesChakra is a browser game platform that features free online HTML5 games. All games are unblocked and available to play instantly.
             </p>
             <div className="flex space-x-4 pt-2">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="Facebook">
+              <a href="#" className="text-muted-foreground hover:text-blue-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Facebook">
                 <FaFacebook />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="Twitter">
+              <a href="#" className="text-muted-foreground hover:text-sky-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Twitter">
                 <FaTwitter />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="Discord">
+              <a href="#" className="text-muted-foreground hover:text-indigo-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Discord">
                 <FaDiscord />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="Instagram">
+              <a href="#" className="text-muted-foreground hover:text-pink-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="Instagram">
                 <FaInstagram />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="WhatsApp">
+              <a href="#" className="text-muted-foreground hover:text-green-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="WhatsApp">
                 <FaWhatsapp />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xl" aria-label="YouTube">
+              <a href="#" className="text-muted-foreground hover:text-red-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce" aria-label="YouTube">
                 <FaYoutube />
               </a>
             </div>
@@ -84,9 +87,15 @@ export default function Footer() {
                 </ScrollLink>
               </li>
             </ul>
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>Phone: +91 9953105778</p>
-              <p>Email: madishanstudios@gmail.com</p>
+            <div className="mt-4 text-sm text-muted-foreground space-y-1">
+              <p className="flex items-center hover:text-amber-400 transition-colors duration-300">
+                <span className="material-icons text-sm mr-2">phone</span>
+                +91 9953105778
+              </p>
+              <p className="flex items-center hover:text-amber-400 transition-colors duration-300">
+                <span className="material-icons text-sm mr-2">email</span>
+                madishanstudios@gmail.com
+              </p>
             </div>
           </div>
           
@@ -150,10 +159,10 @@ export default function Footer() {
           <div className="mt-4 md:mt-0">
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-black px-3 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
+              className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black px-3 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-amber-500/25 group hover:scale-105 hover:rotate-12"
               aria-label="Scroll to top"
             >
-              <FaArrowUp className="text-sm" />
+              <FaArrowUp className="text-sm transition-transform duration-300 group-hover:animate-bounce" />
               <span className="text-sm font-medium">Top</span>
             </button>
           </div>

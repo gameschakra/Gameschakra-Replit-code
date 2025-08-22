@@ -22,6 +22,8 @@ import BlogPage from "@/pages/BlogPage";
 import BlogPostPage from "@/pages/BlogPostPage";
 import BlogCreate from "@/pages/admin/blog/BlogCreate";
 import Developers from "@/pages/Developers";
+import { GamesListByCategory } from "@/pages/GamesListByCategory";
+import Search from "@/pages/Search";
 import SubmitGame from "@/pages/SubmitGame";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -44,6 +46,8 @@ function Router() {
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/search" component={Search} />
+          <Route path="/category/:slug" component={GamesListByCategory} />
           <Route path="/games/:slug" component={GameDetailsPage} />
           <Route path="/challenges/:slug" component={({params}) => <ChallengePage params={params} />} />
           <Route path="/admin" component={Dashboard} />

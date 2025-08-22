@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="GamesChakra - Play free HTML5 games online. Action, adventure, racing, puzzle, and many more categories of games!">
+  <!-- GC_SEO: Default meta tags - will be overridden by page-specific SEO -->
+  <meta name="description" content="Play hundreds of free HTML5 games online. Action, adventure, racing, puzzle, and many more categories. No downloads required, play instantly in your browser!">
   <meta name="keywords" content="games, online games, free games, HTML5 games, browser games, play games">
   <meta name="theme-color" content="#7e22ce">
   <meta name="google-adsense-account" content="ca-pub-2067900913632539">
@@ -20,23 +21,46 @@
   <!-- Content Security Policy for AdSense and third-party resources -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://*.googleadservices.com https://*.googlesyndication.com https://www.google-analytics.com https://*.googletagservices.com https://*.adservice.google.com https://*.google.com https://*.doubleclick.net https://www.googletagmanager.com; frame-src 'self' https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://www.googletagmanager.com; img-src 'self' data: blob: https: http:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://www.google-analytics.com https://www.googletagmanager.com;">
   
-  <link rel="canonical" href="https://gameschakra.com" id="canonical-link" />
+  <!-- GC_SEO: Default canonical and social meta tags - will be overridden by page-specific SEO -->
+  <link rel="canonical" href="https://gameschakra.com" />
   <meta property="og:type" content="website">
-  <meta property="og:title" content="GamesChakra - Play Free HTML5 Games Online" id="og-title">
-  <meta property="og:description" content="Play free HTML5 games online. Action, adventure, racing, puzzle, and many more categories of games!" id="og-description">
-  <meta property="og:image" content="/assets/logo.png" id="og-image">
-  <meta property="og:url" content="https://gameschakra.com" id="og-url">
+  <meta property="og:title" content="Free Online HTML5 Games – Play Now | GamesChakra">
+  <meta property="og:description" content="Play hundreds of free HTML5 games online. Action, adventure, racing, puzzle, and many more categories. No downloads required, play instantly in your browser!">
+  <meta property="og:image" content="/assets/logo.png">
+  <meta property="og:url" content="https://gameschakra.com">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="GamesChakra - Play Free HTML5 Games Online" id="twitter-title">
-  <meta name="twitter:description" content="Play free HTML5 games online. Action, adventure, racing, puzzle, and many more categories of games!" id="twitter-description">
-  <meta name="twitter:image" content="/assets/logo.png" id="twitter-image">
-  <title>GamesChakra - Play Free HTML5 Games Online</title>
+  <meta name="twitter:title" content="Free Online HTML5 Games – Play Now | GamesChakra">
+  <meta name="twitter:description" content="Play hundreds of free HTML5 games online. Action, adventure, racing, puzzle, and many more categories. No downloads required, play instantly in your browser!">
+  <meta name="twitter:image" content="/assets/logo.png">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  
+  <!-- GC_SEO: Default title - will be overridden by page-specific SEO -->
+  <title>Free Online HTML5 Games – Play Now | GamesChakra</title>
+  <!-- Performance: Font optimization with preconnect + non-blocking load -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
   <link rel="preconnect" href="https://googleads.g.doubleclick.net" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <!-- Preload fonts for non-blocking load -->
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@700;800;900&display=swap"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@700;800;900&display=swap">
+  </noscript>
+  
+  <!-- Material Icons non-blocking load -->
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/icon?family=Material+Icons"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  </noscript>
   
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2067900913632539" crossorigin="anonymous"></script>

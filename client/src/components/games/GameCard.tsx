@@ -11,9 +11,10 @@ import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
 interface GameCardProps {
   game: Game;
   isCompact?: boolean;
+  priority?: boolean;
 }
 
-export default function GameCard({ game, isCompact = false }: GameCardProps) {
+export default function GameCard({ game, isCompact = false, priority = false }: GameCardProps) {
   const { toast } = useToast();
   
   // Check if game is favorited
@@ -100,16 +101,18 @@ export default function GameCard({ game, isCompact = false }: GameCardProps) {
   };
 
   return (
-    <div className="group challenge-thumbnail-fade-rtl relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 hover:border-gray-300">
+    <div className="group challenge-thumbnail-fade-rtl relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-500 hover:border-amber-300 hover:-translate-y-2">
       <a href={`/games/${game.slug}`} onClick={handleNavigate} className="block">
         <div className="relative pb-[75%] overflow-hidden">
           {thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? (
-            <div className="absolute inset-0 w-full h-full group-hover:scale-105 transition-transform duration-500">
+            <div className="absolute inset-0 w-full h-full group-hover:scale-110 transition-transform duration-700">
               <LazyImage 
                 src={thumbnailSrc} 
                 alt={`${game.title} thumbnail`}
                 className="w-full h-full object-cover"
                 placeholderText={game.title}
+                priority={priority}
+                ratio="4/3"
                 key={`thumb-${game.id}-${Date.now()}`} /* Force re-render with unique key */
               />
             </div>
@@ -118,22 +121,32 @@ export default function GameCard({ game, isCompact = false }: GameCardProps) {
               <LazyImage 
                 src="/assets/logo.png"
                 alt={`${game.title} thumbnail`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 placeholderText="Game"
+                priority={priority}
+                ratio="4/3"
               />
             </div>
           )}
           
           {/* Play button overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-            <div className="bg-amber-500 text-black rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform duration-300">
-              <span className="material-icons text-2xl">play_arrow</span>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
+            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black rounded-full p-4 transform scale-0 group-hover:scale-100 transition-all duration-500 shadow-lg hover:shadow-xl animate-pulse group-hover:animate-none">
+              <span className="material-icons text-3xl font-bold">play_arrow</span>
+            </div>
+          </div>
+
+          {/* Quick Play Button - slides in from bottom */}
+          <div className="absolute bottom-0 left-0 right-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-2 px-4 text-center hover:from-amber-600 hover:to-yellow-600 transition-all duration-300">
+              <span className="material-icons text-sm mr-1">play_circle</span>
+              Play Now
             </div>
           </div>
 
           {/* New or trending tag */}
           {game.isFeatured && (
-            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded shadow-sm">
+            <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold py-1 px-2 rounded shadow-lg animate-pulse">
               New
             </div>
           )}
@@ -153,14 +166,14 @@ export default function GameCard({ game, isCompact = false }: GameCardProps) {
               </span>
             )}
             <div className="flex items-center">
-              <div className="flex">
-                <span className="material-icons text-yellow-400 text-sm">star</span>
-                <span className="material-icons text-yellow-400 text-sm">star</span>
-                <span className="material-icons text-yellow-400 text-sm">star</span>
-                <span className="material-icons text-yellow-400 text-sm">star</span>
-                <span className="material-icons text-gray-300 text-sm">star</span>
+              <div className="flex group-hover:scale-110 transition-transform duration-300">
+                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
+                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
+                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
+                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
+                <span className="material-icons text-gray-300 text-sm hover:text-yellow-300 transition-colors duration-200">star</span>
               </div>
-              <span className="text-xs font-medium text-gray-500 ml-1">
+              <span className="text-xs font-medium text-gray-500 ml-1 group-hover:text-amber-600 transition-colors duration-300">
                 4.0
               </span>
             </div>

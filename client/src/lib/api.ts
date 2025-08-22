@@ -1,5 +1,6 @@
 import { User } from "@/types";
 import { apiRequest, queryClient } from "./queryClient";
+import { toItemsArray } from "@/lib/normalize";
 
 // Auth related API calls
 export const auth = {
@@ -67,7 +68,9 @@ export const games = {
   async getAll(options: { 
     limit?: number, 
     offset?: number,
+    page?: number,
     categoryId?: number,
+    categorySlug?: string,
     search?: string,
     status?: "draft" | "published",
     featured?: boolean
@@ -77,7 +80,9 @@ export const games = {
     
     if (options.limit) queryParams.append("limit", options.limit.toString());
     if (options.offset) queryParams.append("offset", options.offset.toString());
+    if (options.page) queryParams.append("page", options.page.toString());
     if (options.categoryId) queryParams.append("categoryId", options.categoryId.toString());
+    if (options.categorySlug) queryParams.append("categorySlug", options.categorySlug);
     // GC_FIX: Use 'q' param for search
     if (options.search) queryParams.append("q", options.search);
     if (options.status) queryParams.append("status", options.status);
@@ -88,19 +93,22 @@ export const games = {
       url += `?${queryString}`;
     }
     
-    return apiRequest("GET", url, null);
+    const json = await apiRequest("GET", url, null);
+    return toItemsArray(json); // GC_FIX(normalize): return Game[] always
   },
   
   // Get featured games
   async getFeatured(limit?: number): Promise<any[]> {
     const queryParams = limit ? `?limit=${limit}` : "";
-    return apiRequest("GET", `/api/games/featured${queryParams}`, null);
+    const json = await apiRequest("GET", `/api/games/featured${queryParams}`, null);
+    return toItemsArray(json); // GC_FIX(normalize): return Game[] always
   },
   
   // Get popular games
   async getPopular(limit?: number): Promise<any[]> {
     const queryParams = limit ? `?limit=${limit}` : "";
-    return apiRequest("GET", `/api/games/popular${queryParams}`, null);
+    const json = await apiRequest("GET", `/api/games/popular${queryParams}`, null);
+    return toItemsArray(json); // GC_FIX(normalize): return Game[] always
   },
   
   // Get single game by slug

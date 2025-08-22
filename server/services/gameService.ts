@@ -6,6 +6,80 @@ import {
   InsertFavorite, InsertRecentlyPlayed 
 } from '@shared/schema';
 
+// GC_FIX: listGames with category filters
+type ListGamesParams = {
+  limit?: number;
+  offset?: number;
+  categoryId?: number;
+  categorySlug?: string;
+  status?: "draft" | "published";
+  featured?: boolean;
+  search?: string;
+  sort?: string;
+  rating?: string;
+  dateFilter?: string;
+};
+
+// GC_FIX: listGames with category filters
+export async function listGames(params: ListGamesParams = {}): Promise<{ rows: Game[], total: number }> {
+  try {
+    const {
+      limit = 24,
+      offset = 0,
+      categoryId,
+      categorySlug,
+      status,
+      featured,
+      search,
+      sort,
+      rating,
+      dateFilter
+    } = params;
+
+    // Handle categorySlug by looking up the category
+    let finalCategoryId = categoryId;
+    if (!finalCategoryId && categorySlug) {
+      const category = await storage.getCategoryBySlug(categorySlug);
+      if (!category) {
+        // Return empty results if category slug not found
+        return { rows: [], total: 0 };
+      }
+      finalCategoryId = category.id;
+    }
+
+    // Get games using existing storage method
+    const games = await storage.getGames({
+      limit,
+      offset,
+      categoryId: finalCategoryId,
+      status,
+      featured,
+      search,
+      sort,
+      rating,
+      dateFilter
+    });
+
+    // Get total count for pagination (fetch without limit/offset)
+    const allGames = await storage.getGames({
+      categoryId: finalCategoryId,
+      status,
+      featured,
+      search,
+      rating,
+      dateFilter
+    });
+
+    return {
+      rows: games,
+      total: allGames.length
+    };
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to list games: ${err}`);
+  }
+}
+
 // Create a new game
 export async function createGame(gameData: Omit<InsertGame, 'gameDir' | 'entryFile'>, zipBuffer: Buffer, thumbnailBuffer?: Buffer): Promise<Game> {
   try {

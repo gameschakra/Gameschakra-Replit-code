@@ -4,6 +4,7 @@ import { useLocation, Link } from "wouter";
 import { Category, Game, Challenge } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import SearchBar from "@/components/search/SearchBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +15,24 @@ import ActiveChallengeCard from "@/components/challenges/ActiveChallengeCard";
 import UpcomingChallengeCard from "@/components/challenges/UpcomingChallengeCard";
 import AdSense from "@/components/ads/AdSense";
 import TestAdButton from "@/components/ads/TestAdButton";
+import { toItemsArray } from "@/lib/normalize";
+// GC_SEO: Import new centralized SEO utilities
+import { 
+  applyMeta, 
+  injectJsonLd, 
+  clearJsonLd, 
+  generateItemListJsonLd, 
+  getBaseUrl,
+  resetToDefaults,
+  truncateDescription 
+} from "@/lib/seo";
 
 export default function Home() {
   const [location] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
-  // Parse URL params
+  // Parse URL params and handle SEO
   useEffect(() => {
     const params = new URLSearchParams(location.split("?")[1]);
     const category = params.get("category");
@@ -29,7 +40,6 @@ export default function Home() {
     const search = params.get("search");
 
     if (search) {
-      setSearchQuery(search);
       setActiveSection("search");
     } else if (section) {
       setActiveSection(section);
@@ -64,7 +74,7 @@ export default function Home() {
         limit: 100, // बढ़ाया गया limit ताकि सभी गेम्स दिखाई दें
         categoryId: selectedCategory,
         status: "published",
-        search: activeSection === "search" ? searchQuery : undefined,
+        search: activeSection === "search" ? new URLSearchParams(location.split("?")[1]).get("search") : undefined,
       },
     ],
   });
@@ -103,14 +113,82 @@ export default function Home() {
     enabled: activeSection === "completed-challenges" || activeSection === "all",
   });
 
-  // Handle search submission
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setActiveSection("search");
-      refetchGames();
+  // GC_SEO: Handle SEO for different page states
+  useEffect(() => {
+    const baseUrl = getBaseUrl();
+    const searchQuery = new URLSearchParams(location.split("?")[1]).get("search");
+    
+    if (activeSection === "search" && searchQuery) {
+      // GC_SEO: Search results page SEO
+      const canonicalUrl = `${baseUrl}/search?q=${encodeURIComponent(searchQuery)}`;
+      const description = `Search results for "${searchQuery}" on GamesChakra. Find and play free online games.`;
+      
+      applyMeta({
+        title: `Search "${searchQuery}" – GamesChakra`,
+        description,
+        canonical: canonicalUrl,
+        og: {
+          'og:type': 'website',
+          'og:title': `Search "${searchQuery}" – GamesChakra`,
+          'og:description': description,
+          'og:url': canonicalUrl
+        },
+        twitter: {
+          'twitter:card': 'summary_large_image',
+          'twitter:title': `Search "${searchQuery}" – GamesChakra`,
+          'twitter:description': description
+        }
+      });
+      
+      // Add ItemList JSON-LD for search results when games are loaded
+      const currentGames = getCurrentGames();
+      if (currentGames.length > 0) {
+        const gamesForJsonLd = currentGames.slice(0, 50).map(game => ({
+          name: game.title,
+          url: `/games/${game.slug}`,
+          image: game.thumbnailUrl || game.thumbnailPath ? 
+            `/api/games/${game.gameDir}/${game.thumbnailPath || game.thumbnailUrl}` : 
+            undefined
+        }));
+        
+        const itemListJsonLd = generateItemListJsonLd(
+          gamesForJsonLd,
+          `Search Results for "${searchQuery}"`
+        );
+        
+        injectJsonLd('gc-itemlist', itemListJsonLd);
+      }
+    } else if (activeSection === "all" || !activeSection) {
+      // GC_SEO: Home page SEO
+      applyMeta({
+        title: 'Free Online HTML5 Games – Play Now | GamesChakra',
+        description: 'Play hundreds of free HTML5 games online. Action, adventure, racing, puzzle, and many more categories. No downloads required, play instantly in your browser!',
+        canonical: '/',
+        og: {
+          'og:type': 'website',
+          'og:image': '/assets/logo.png'
+        },
+        twitter: {
+          'twitter:card': 'summary_large_image',
+          'twitter:image': '/assets/logo.png'
+        }
+      });
+      
+      // Clear any search-specific JSON-LD
+      clearJsonLd(['gc-itemlist']);
+    } else {
+      // GC_SEO: Other sections - just clear search JSON-LD
+      clearJsonLd(['gc-itemlist']);
     }
-  };
+    
+    // Cleanup on unmount
+    return () => {
+      if (activeSection === "search") {
+        clearJsonLd(['gc-itemlist']);
+      }
+    };
+  }, [activeSection, location, games]);
+
 
   // Render loading grid
   const renderLoadingGrid = () => (
@@ -130,15 +208,15 @@ export default function Home() {
 
   // Get current games to display based on active section
   const getCurrentGames = () => {
-    if (activeSection === "popular") return popularGames || [];
-    if (activeSection === "featured") return featuredGames || [];
+    if (activeSection === "popular") return toItemsArray<Game>(popularGames);
+    if (activeSection === "featured") return toItemsArray<Game>(featuredGames);
     if (activeSection === "favorites") {
       return Array.isArray(favorites) ? favorites.map((f: any) => f.game) : [];
     }
     if (activeSection === "recent") {
       return Array.isArray(recentlyPlayed) ? recentlyPlayed.map((r: any) => r.game) : [];
     }
-    return games || []; // Default for all, categories, and search
+    return toItemsArray<Game>(games); // Default for all, categories, and search
   };
 
   // Check if current section is loading
@@ -220,7 +298,7 @@ export default function Home() {
       case "active-challenges": return "Active Challenges";
       case "upcoming-challenges": return "Upcoming Challenges";
       case "completed-challenges": return "Completed Challenges";
-      case "search": return `Search Results: "${searchQuery}"`;
+      case "search": return `Search Results: "${new URLSearchParams(location.split("?")[1]).get("search") || ""}"`;
       case "categories": 
         if (selectedCategory && categories) {
           const category = categories.find(c => c.id === selectedCategory);
@@ -379,10 +457,10 @@ export default function Home() {
                 <nav className="space-y-1">
                   <Link 
                     href="/" 
-                    className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'all' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
+                    className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-300 group ${activeSection === 'all' ? 'bg-amber-500/20 text-amber-400 font-medium shadow-lg shadow-amber-500/10' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500 hover:shadow-md hover:shadow-amber-500/5'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('all'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">home</span>
+                    <span className="material-icons mr-3 text-sm transition-all duration-300 group-hover:scale-110 group-hover:text-amber-400">home</span>
                     Home
                   </Link>
                   <Link 
@@ -493,29 +571,27 @@ export default function Home() {
                   </div>
                 ) : (
                   <nav className="space-y-1">
-                    {categories?.map((category) => (
-                      <Link
-                        key={category.id}
-                        href={`/?category=${category.id}`}
-                        className={`flex items-center justify-between px-2 py-2 text-sm rounded-lg transition-colors ${
-                          activeSection === 'categories' && selectedCategory === category.id
-                            ? 'bg-amber-500/20 text-amber-400 font-medium'
-                            : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setActiveSection('categories');
-                          setSelectedCategory(category.id);
-                        }}
-                      >
-                        <span>{category.name}</span>
-                        {(category as any).gameCount > 0 && (
-                          <span className="bg-gray-800 text-xs text-gray-300 px-2 py-0.5 rounded">
-                            {(category as any).gameCount}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
+                    {categories?.map((category) => {
+                      const isActive = location === `/category/${category.slug}` || location.startsWith(`/category/${category.slug}`);
+                      return (
+                        <Link
+                          key={category.id}
+                          href={`/category/${category.slug}`}
+                          className={`flex items-center justify-between px-2 py-2 text-sm rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-amber-500/20 text-amber-400 font-medium'
+                              : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'
+                          }`}
+                        >
+                          <span>{category.name}</span>
+                          {(category as any).gameCount > 0 && (
+                            <span className="bg-gray-800 text-xs text-gray-300 px-2 py-0.5 rounded">
+                              {(category as any).gameCount}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
                   </nav>
                 )}
               </div>
@@ -524,20 +600,11 @@ export default function Home() {
           
           {/* Main Content Area */}
           <div className="flex-1">
-            {/* Mobile Search + Categories Dropdown */}
+            {/* SEARCH_REFACTOR: Mobile Search + Categories Dropdown */}
             <div className="md:hidden mb-5">
-              <form onSubmit={handleSearch} className="mb-3">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="Search games..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-full text-sm bg-gray-800 border-gray-700 text-gray-200 focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
-                  />
-                  <span className="material-icons absolute left-3 top-2.5 text-gray-500 text-sm">search</span>
-                </div>
-              </form>
+              <div className="mb-3">
+                <SearchBar placeholder="Search games..." size="sm" />
+              </div>
               
               {/* Mobile Categories Accordion */}
               <Accordion type="single" collapsible className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-sm rounded-xl overflow-hidden">
@@ -587,21 +654,17 @@ export default function Home() {
 
             {/* Section Header */}
             <div className="flex flex-wrap items-center justify-between mb-5">
-              <h1 className="text-2xl font-title font-bold text-amber-500">{getSectionTitle()}</h1>
+              <div>
+                <h1 className="text-2xl font-title font-bold text-amber-500 mb-1">{getSectionTitle()}</h1>
+                {activeSection === 'categories' && (
+                  <p className="text-sm text-gray-400">Filter by Category</p>
+                )}
+              </div>
               
-              {/* Desktop Search */}
-              <form onSubmit={handleSearch} className="hidden md:block">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="Search games..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full min-w-[260px] pl-10 pr-4 py-2 rounded-full text-sm bg-gray-800 border-gray-700 text-gray-200 focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
-                  />
-                  <span className="material-icons absolute left-3 top-2.5 text-gray-500 text-sm">search</span>
-                </div>
-              </form>
+              {/* SEARCH_REFACTOR: Desktop Search */}
+              <div className="hidden md:block">
+                <SearchBar placeholder="Search games..." size="sm" className="min-w-[260px]" />
+              </div>
             </div>
             
             {/* Games or Challenges Grid */}
@@ -721,9 +784,19 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {getCurrentGames().map((game: Game) => (
-                          <div key={game.id} className="group hover:scale-105 transition-all duration-300">
-                            <GameCard game={game} />
+                        {getCurrentGames().map((game: Game, index: number) => (
+                          <div key={game.id} className="transform transition-all duration-500 hover:z-10">
+                            <GameCard game={game} priority={index === 0} />
+                            {/* Quick actions on hover */}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                              <button 
+                                onClick={(e) => {e.preventDefault(); /* Add to favorites logic */}}
+                                className="bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm"
+                                title="Add to favorites"
+                              >
+                                <span className="material-icons text-sm">favorite_border</span>
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

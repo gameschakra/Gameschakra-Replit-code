@@ -1,0 +1,27 @@
+# GC_SEO: Robots.txt for GamesChakra
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+
+# Disallow admin and API endpoints
+Disallow: /api/
+Disallow: /admin/
+Disallow: /uploads/
+
+# Disallow temporary and private directories
+Disallow: /tmp/
+Disallow: /.well-known/
+Disallow: /dist/
+Disallow: /node_modules/
+
+# Allow search engines to access static assets
+Allow: /assets/
+Allow: /images/
+Allow: /favicon.ico
+
+# Sitemap location
+Sitemap: https://gameschakra.com/sitemap.xml
+
+# Crawl delay to be respectful to our server
+Crawl-delay: 1
