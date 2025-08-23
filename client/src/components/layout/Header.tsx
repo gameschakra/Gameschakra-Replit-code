@@ -77,7 +77,7 @@ export default function Header() {
               <span className="material-icons text-black text-sm font-bold">sports_esports</span>
             </div>
             {/* Wordmark - visible on mobile with truncate */}
-            <span className="inline-block text-[13px] sm:text-sm font-title font-extrabold tracking-tight max-w-[120px] sm:max-w-none truncate text-white">
+            <span className="inline-block text-base sm:text-xl font-title font-extrabold tracking-tight max-w-[140px] sm:max-w-none truncate text-white">
               GAMES<span className="text-amber-500">CHAKRA</span>
             </span>
           </Link>
