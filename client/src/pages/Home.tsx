@@ -599,7 +599,7 @@ export default function Home() {
           </div>
           
           {/* Main Content Area */}
-          <div className="flex-1">
+          <div className="flex-1" data-section="all-games">
             {/* SEARCH_REFACTOR: Mobile Search + Categories Dropdown */}
             <div className="md:hidden mb-5">
               <div className="mb-3">

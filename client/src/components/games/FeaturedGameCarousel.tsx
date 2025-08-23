@@ -109,10 +109,20 @@ export default function FeaturedGameCarousel() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-title font-bold text-white">Featured Games</h2>
-          <Link href="/games" className="text-amber-400 hover:text-amber-300 inline-flex items-center gap-1">
+          <button
+            onClick={() => {
+              const gamesSection = document.querySelector('[data-section="all-games"]');
+              if (gamesSection) {
+                gamesSection.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                window.location.href = "/?section=all";
+              }
+            }}
+            className="text-amber-400 hover:text-amber-300 inline-flex items-center gap-1 transition-colors focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none"
+          >
             View All Games
             <span className="material-icons text-[16px]">arrow_forward</span>
-          </Link>
+          </button>
         </div>
         
         {/* Carousel Container */}
@@ -138,7 +148,7 @@ export default function FeaturedGameCarousel() {
                         <img
                           src={getThumbnailSrc(game)}
                           alt={`${game.title} featured game`}
-                          className="h-44 sm:h-56 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                          className="h-52 sm:h-56 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                           loading="lazy"
                           draggable={false}
                         />

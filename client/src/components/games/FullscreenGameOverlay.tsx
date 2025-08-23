@@ -21,10 +21,9 @@ export default function FullscreenGameOverlay({
   // Activate swipe-back guard when in fullscreen
   useSwipeBackGuard(true);
 
-  // Handle exit button click
+  // Handle exit button click - only call onClose, no navigation
   const handleExit = () => {
     onClose?.();
-    navigate(-1); // Go back to previous route
   };
 
   // Setup fullscreen overlay effects
@@ -45,22 +44,26 @@ export default function FullscreenGameOverlay({
   }, []);
 
   return createPortal(
-    <div className="gc-fs-overlay">
-      {/* Exit button overlay */}
-      {showExitButton && (
-        <button
-          onClick={handleExit}
-          className="gc-fs-exit-btn"
-          aria-label="Exit fullscreen"
-          title="Exit fullscreen (ESC)"
-        >
-          <X size={24} strokeWidth={2.5} />
-        </button>
-      )}
-
-
-      {/* Game content */}
-      {children}
+    <div 
+      className="gc-fs-overlay"
+      onClick={() => onClose?.()}
+    >
+      <div className="game-shell game-shell--overlay" onClick={(e) => e.stopPropagation()}>
+        {/* Top-right close button */}
+        {showExitButton && (
+          <button
+            type="button"
+            aria-label="Close game"
+            className="gc-fs-close"
+            onClick={(e) => { e.stopPropagation(); onClose?.(); }}
+          >
+            ✕
+          </button>
+        )}
+        
+        {/* Game content */}
+        {children}
+      </div>
     </div>,
     document.body
   );

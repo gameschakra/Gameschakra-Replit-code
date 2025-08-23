@@ -62,9 +62,17 @@ export default function GameDetail() {
     data: game,
     isLoading,
     isError,
+    error,
+    isFetching,
   } = useQuery<Game>({
-    queryKey: [`/api/games/${slug}`],
+    queryKey: ['game', slug],
+    queryFn: async () => {
+      const r = await apiRequest('GET', `/api/games/${slug}`);
+      return r.json();
+    },
     enabled: !!slug,
+    keepPreviousData: true,
+    staleTime: 60_000,
   });
 
   // Get related games by the same category
@@ -181,11 +189,14 @@ export default function GameDetail() {
       injectJsonLd('gc-game', gameJsonLd);
     }
     
-    // GC_SEO: Cleanup on unmount
+    // GC_SEO: Cleanup only if leaving this page (slug changes or component unmounts), not when overlay toggles
     return () => {
       clearJsonLd(['gc-breadcrumb', 'gc-game']);
+      const schema = document.getElementById('game-schema');
+      schema?.remove();
     };
-  }, [game]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id]); // depend on id/slug, NOT overlayFs
 
   // Handle favorite button click
   const handleToggleFavorite = () => {
@@ -193,22 +204,24 @@ export default function GameDetail() {
   };
 
   // GC_FIX(fullscreen): Element-based fullscreen helpers
-  function requestFs(el: any) {
-    const fn = el?.requestFullscreen
-      || el?.webkitRequestFullscreen
-      || el?.mozRequestFullScreen
-      || el?.msRequestFullscreen;
-    if (!fn) throw new Error('Fullscreen not supported');
-    return fn.call(el);
+  async function requestFs(el?: Element | null) {
+    const target = el ?? iframeRef.current ?? containerRef.current;
+    const fn =
+      (target as any)?.requestFullscreen ||
+      (target as any)?.webkitRequestFullscreen ||
+      (target as any)?.mozRequestFullScreen ||
+      (target as any)?.msRequestFullscreen;
+    if (fn) await fn.call(target);
   }
 
-  function exitFs() {
+  async function exitFs() {
     const d: any = document;
-    const fn = document.exitFullscreen
-      || d.webkitExitFullscreen
-      || d.mozCancelFullScreen
-      || d.msExitFullscreen;
-    return fn && fn.call(document);
+    const fn =
+      document.exitFullscreen ||
+      d.webkitExitFullscreen ||
+      d.mozCancelFullScreen ||
+      d.msExitFullscreen;
+    if (fn) await fn.call(document);
   }
 
   // GC_FIX(fullscreen): Listen for fullscreen changes
@@ -229,31 +242,18 @@ export default function GameDetail() {
     };
   }, []);
 
-  // GC_FIX(fullscreen): Mobile overlay-only, desktop element FS with fallback
   async function handleFullscreen() {
-    const el = iframeRef.current ?? containerRef.current;
-    if (!el) return;
-
-    if (isSmall) {
-      // MOBILE: overlay only (no Fullscreen API)
-      setOverlayFs(true);
-      return;
-    }
-    
-    // DESKTOP: element FS, fallback overlay
     try {
-      await requestFs(el);
+      await requestFs();
     } catch {
-      setOverlayFs(true);
+      setOverlayFs(true); // fallback
     }
   }
 
-  // GC_FIX(fullscreen): Exit fullscreen handler
-  async function handleExitFullscreen() {
+  async function handleExitOverlay() {
     setOverlayFs(false);
-    try {
-      await exitFs();
-    } catch {}
+    await exitFs();           // only exit FS
+    // DO NOT navigate or alter slug/state
   }
   
   // Open embed dialog
@@ -273,7 +273,7 @@ export default function GameDetail() {
     }
   };
 
-  if (isError) {
+  if (isError && !isLoading && !isFetching && !game) {
     return (
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4 text-center">
@@ -374,24 +374,20 @@ export default function GameDetail() {
 
   return (
     <>
-      {/* GC_UX: Enhanced fullscreen overlay with UX improvements */}
-      {overlayFs ? (
-        <FullscreenGameOverlay 
-          onClose={handleExitFullscreen}
-          showExitButton={true}
-        >
-          <div className="game-shell game-shell--overlay">
-            <iframe
-              src={`/api/games/${game.gameDir}/${game.entryFile}`}
-              title={`${game.title} - Fullscreen Play`}
-              allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
-              allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
-              style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
-            />
-          </div>
+      {overlayFs && (
+        <FullscreenGameOverlay onClose={handleExitOverlay}>
+          <iframe
+            src={`/api/games/${game.gameDir}/${game.entryFile}`}
+            title={`${game.title} - Fullscreen Play`}
+            allow="fullscreen; gamepad; xr-spatial-tracking; autoplay; encrypted-media"
+            allowFullScreen
+            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
+            style={{ border: 0, width: '100%', height: '100%', display: 'block' }}
+          />
         </FullscreenGameOverlay>
-      ) : (
+      )}
+      
+      {!overlayFs && (
         <section className="py-10 bg-background">
           <div className="container mx-auto px-4">
             <div className="mb-4 flex items-center">

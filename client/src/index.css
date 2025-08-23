@@ -221,11 +221,14 @@
   z-index: 9999;
   display: grid;
   place-items: center;
+  pointer-events: auto;
 }
 
 .game-shell--overlay {
   width: 100vw;
   height: 100dvh;
+  pointer-events: auto;
+  position: relative;
 }
 
 .game-shell--overlay > iframe {
@@ -233,6 +236,28 @@
   height: 100%;
   display: block;
   border: 0;
+}
+
+.gc-fs-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.gc-fs-close:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
 }
 
 /* Ensure site header/footer don't sit above the overlay */
