@@ -71,13 +71,13 @@ export default function Header() {
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between h-16 max-w-full">
         {/* Logo */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-md outline-none">
+          <Link href="/" className="flex items-center gap-2 min-w-0 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-md outline-none">
             {/* Compact Logo Mark */}
-            <div className="h-6 w-6 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-md flex items-center justify-center mr-2 shadow-md">
+            <div className="h-6 w-6 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-md flex items-center justify-center shrink-0 shadow-md">
               <span className="material-icons text-black text-sm font-bold">sports_esports</span>
             </div>
-            {/* Wordmark - hidden on xs, visible on sm+ */}
-            <span className="hidden sm:inline font-title font-bold text-2xl text-white">
+            {/* Wordmark - visible on mobile with truncate */}
+            <span className="inline-block text-[13px] sm:text-sm font-title font-extrabold tracking-tight max-w-[120px] sm:max-w-none truncate text-white">
               GAMES<span className="text-amber-500">CHAKRA</span>
             </span>
           </Link>

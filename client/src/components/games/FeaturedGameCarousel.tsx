@@ -109,15 +109,16 @@ export default function FeaturedGameCarousel() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-title font-bold text-white">Featured Games</h2>
-          <Link href="/games" className="text-amber-500 hover:text-amber-400 flex items-center text-sm font-medium">
-            View All Games <span className="material-icons text-base ml-1">arrow_forward</span>
+          <Link href="/games" className="text-amber-400 hover:text-amber-300 inline-flex items-center gap-1">
+            View All Games
+            <span className="material-icons text-[16px]">arrow_forward</span>
           </Link>
         </div>
         
         {/* Carousel Container */}
         <div className="relative carousel-container" ref={swipeRef}>
-          {/* Touch gesture overlay for mobile */}
-          <div className="absolute inset-0 z-10 touch-pan-y md:hidden" />
+          {/* Touch gesture overlay for mobile - pointer-events-none */}
+          <div className="pointer-events-none absolute inset-0 z-10 touch-pan-y md:hidden" aria-hidden="true" />
           
           {/* Carousel Track */}
           <div 
@@ -125,71 +126,66 @@ export default function FeaturedGameCarousel() {
             className="flex transition-transform duration-500 ease-out carousel-track" 
             style={{ transform: `translateX(-${currentSlide * (100 / totalSlides)}%)` }}
           >
-            {featuredGames.map((game) => (
-              <div key={game.id} className="min-w-full md:min-w-[50%] lg:min-w-[33.333%] px-3">
-                <Link href={`/games/${game.slug}`} className="block h-full">
-                  <div className="bg-gradient-to-b from-gray-800/70 to-gray-900/70 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 transform transition-transform hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(251,191,36,0.15)] h-full group">
-                    <div className="relative pb-[56.25%]">
-                      {/* Use the improved thumbnail helper for consistent image URLs */}
-                      {(() => {
-                        // Import the shared thumbnail helper
-                        // Using the getThumbnailSrc helper for consistency across components
-                        const thumbnailSrc = getThumbnailSrc(game);
-                        
-                        return thumbnailSrc ? (
-                          <img 
-                            src={thumbnailSrc} 
-                            alt={`${game.title} featured game`} 
-                            className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                            draggable={false}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 w-full h-full">
-                            <PlaceholderImage 
-                              text="Featured Game" 
-                              className="w-full h-full"
-                            />
+            {featuredGames.map((game) => {
+              const href = `/games/${game.slug}`;
+              
+              return (
+                <div key={game.id} className="min-w-full md:min-w-[50%] lg:min-w-[33.333%] px-3">
+                  <div className="relative">
+                    {/* Wrap the visual card with Link so entire card is tappable */}
+                    <Link href={href} className="block group focus:outline-none">
+                      <div className="relative rounded-xl overflow-hidden border border-border bg-black">
+                        <img
+                          src={getThumbnailSrc(game)}
+                          alt={`${game.title} featured game`}
+                          className="h-44 sm:h-56 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                          loading="lazy"
+                          draggable={false}
+                        />
+
+                        {/* Top/side gradient masks should NOT block taps */}
+                        <div
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"
+                          aria-hidden="true"
+                        />
+
+                        {/* Title & meta */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                          <h3 className="font-title font-semibold text-white text-base sm:text-lg drop-shadow">
+                            {game.title}
+                          </h3>
+                          <div className="flex items-center mt-1 space-x-2">
+                            <div className="flex items-center">
+                              <span className="material-icons text-amber-500 text-sm">star</span>
+                              <span className="material-icons text-amber-500 text-sm">star</span>
+                              <span className="material-icons text-amber-500 text-sm">star</span>
+                              <span className="material-icons text-amber-500 text-sm">star</span>
+                              <span className="material-icons text-amber-500 text-sm">star_half</span>
+                            </div>
+                            <span className="text-xs text-gray-300">4.5</span>
+                            <span className="text-xs text-gray-400 font-medium bg-gray-800/80 px-2 py-1 rounded-full ml-auto">
+                              {game.category?.name || "Game"}
+                            </span>
                           </div>
-                        );
-                      })()}
-                      
-                      {/* GC_FIX: Play overlay with proper pointer events */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center pointer-events-none">
-                        <div className="bg-amber-500 rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300 pointer-events-auto">
-                          <span className="material-icons text-black text-3xl select-none">play_arrow</span>
                         </div>
                       </div>
-                    
-                    {/* Game title overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                      <div className="p-4 text-white">
-                        <h3 className="font-title font-bold text-xl">{game.title}</h3>
-                        <div className="flex items-center mt-1 space-x-2">
-                          <div className="flex items-center">
-                            <span className="material-icons text-amber-500 text-sm">star</span>
-                            <span className="material-icons text-amber-500 text-sm">star</span>
-                            <span className="material-icons text-amber-500 text-sm">star</span>
-                            <span className="material-icons text-amber-500 text-sm">star</span>
-                            <span className="material-icons text-amber-500 text-sm">star_half</span>
-                          </div>
-                          <span className="text-xs text-gray-300">4.5</span>
-                        </div>
-                      </div>
-                      </div>
-                    </div>
-                    <div className="p-4 flex justify-between items-center pointer-events-none">
-                      <span className="text-xs text-gray-400 font-medium bg-gray-800/80 px-3 py-1 rounded-full">
-                        {game.category?.name || "Game"}
-                      </span>
-                      {/* GC_FIX: Remove duplicate Play Now link - entire card is now clickable */}
-                      <span className="text-amber-500 flex items-center text-sm font-medium">
-                        Play Now <span className="material-icons text-base ml-1">arrow_forward</span>
-                      </span>
+                    </Link>
+
+                    {/* Play Now button – separate Link with higher z-index but DOES allow click */}
+                    <div className="absolute bottom-3 right-3 z-10">
+                      <Link href={href}>
+                        <button
+                          className="px-3 py-2 rounded-md bg-amber-500 text-black font-semibold shadow hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                          aria-label={`Play ${game.title}`}
+                        >
+                          Play Now
+                        </button>
+                      </Link>
                     </div>
                   </div>
-                </Link>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
           
           {/* Navigation Arrows - Hidden on mobile for touch gestures */}
@@ -238,7 +234,7 @@ export default function FeaturedGameCarousel() {
           )}
           
           {/* Mobile swipe indicator */}
-          <div className="md:hidden text-center mt-2">
+          <div className="pointer-events-none md:hidden text-center mt-2 select-none" aria-hidden="true">
             <p className="text-xs text-gray-400 flex items-center justify-center">
               <span className="material-icons text-sm mr-1">swipe</span>
               Swipe to browse games
