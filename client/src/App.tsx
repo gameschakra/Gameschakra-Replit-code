@@ -18,6 +18,8 @@ import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import CookiesPage from "@/pages/CookiesPage";
 import ParentsInfoPage from "@/pages/ParentsInfoPage";
+import ContactPage from "@/pages/ContactPage";
+import JobsPage from "@/pages/JobsPage";
 import BlogPage from "@/pages/BlogPage";
 import BlogPostPage from "@/pages/BlogPostPage";
 import BlogCreate from "@/pages/admin/blog/BlogCreate";
@@ -66,6 +68,8 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/cookies" component={CookiesPage} />
           <Route path="/info-for-parents" component={ParentsInfoPage} />
+          <Route path="/contact" component={ContactPage} />
+          <Route path="/jobs" component={JobsPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

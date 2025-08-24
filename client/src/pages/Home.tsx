@@ -16,6 +16,7 @@ import UpcomingChallengeCard from "@/components/challenges/UpcomingChallengeCard
 import AdSense from "@/components/ads/AdSense";
 import TestAdButton from "@/components/ads/TestAdButton";
 import { toItemsArray } from "@/lib/normalize";
+import CategoryLink from "@/components/categories/CategoryLink";
 // GC_SEO: Import new centralized SEO utilities
 import { 
   applyMeta, 
@@ -571,27 +572,13 @@ export default function Home() {
                   </div>
                 ) : (
                   <nav className="space-y-1">
-                    {categories?.map((category) => {
-                      const isActive = location === `/category/${category.slug}` || location.startsWith(`/category/${category.slug}`);
-                      return (
-                        <Link
-                          key={category.id}
-                          href={`/category/${category.slug}`}
-                          className={`flex items-center justify-between px-2 py-2 text-sm rounded-lg transition-colors ${
-                            isActive
-                              ? 'bg-amber-500/20 text-amber-400 font-medium'
-                              : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'
-                          }`}
-                        >
-                          <span>{category.name}</span>
-                          {(category as any).gameCount > 0 && (
-                            <span className="bg-gray-800 text-xs text-gray-300 px-2 py-0.5 rounded">
-                              {(category as any).gameCount}
-                            </span>
-                          )}
-                        </Link>
-                      );
-                    })}
+                    {categories?.map((category) => (
+                      <CategoryLink
+                        key={category.id}
+                        category={category as any}
+                        variant="sidebar"
+                      />
+                    ))}
                   </nav>
                 )}
               </div>
@@ -625,25 +612,11 @@ export default function Home() {
                     ) : (
                       <div className="flex flex-wrap gap-2 px-2">
                         {categories?.map((category) => (
-                          <Button
+                          <CategoryLink
                             key={category.id}
-                            variant={activeSection === 'categories' && selectedCategory === category.id ? "default" : "outline"}
-                            size="sm"
-                            className={activeSection === 'categories' && selectedCategory === category.id ? 
-                              "bg-amber-500 hover:bg-amber-600 text-black border-0" : 
-                              "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700"}
-                            onClick={() => {
-                              setActiveSection('categories');
-                              setSelectedCategory(category.id);
-                            }}
-                          >
-                            {category.name}
-                            {(category as any).gameCount > 0 && (
-                              <span className="ml-1.5 bg-gray-700 text-xs text-gray-300 px-1.5 py-0.5 rounded-full">
-                                {(category as any).gameCount}
-                              </span>
-                            )}
-                          </Button>
+                            category={category as any}
+                            variant="pill"
+                          />
                         ))}
                       </div>
                     )}

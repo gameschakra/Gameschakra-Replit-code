@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { FaFacebook, FaTwitter, FaDiscord, FaInstagram, FaWhatsapp, FaYoutube, FaArrowUp } from "react-icons/fa";
+import { FaFacebook, FaDiscord, FaInstagram, FaWhatsapp, FaYoutube, FaArrowUp } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 
 // Custom ScrollLink component to handle scroll-to-top functionality
 const ScrollLink = ({ href, children, className }: { href: string, children: React.ReactNode, className?: string }) => {
@@ -45,16 +46,16 @@ export default function Footer() {
               <a href="#" className="text-muted-foreground hover:text-blue-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Facebook">
                 <FaFacebook />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-sky-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Twitter">
-                <FaTwitter />
+              <a href="#" className="text-muted-foreground hover:text-white transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="X (Twitter)">
+                <FaXTwitter />
               </a>
               <a href="#" className="text-muted-foreground hover:text-indigo-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Discord">
                 <FaDiscord />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-pink-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Instagram">
+              <a href="https://www.instagram.com/games_chakra?igsh=MXZiczA1aWR1MzRyag%3D%3D&utm_source=qr" className="text-muted-foreground hover:text-pink-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
                 <FaInstagram />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-green-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="WhatsApp">
+              <a href="https://whatsapp.com/channel/0029ValZ25r0gcfE5oFKBm0O" className="text-muted-foreground hover:text-green-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="WhatsApp Channel" target="_blank" rel="noopener noreferrer">
                 <FaWhatsapp />
               </a>
               <a href="#" className="text-muted-foreground hover:text-red-400 transition-all duration-300 text-xl hover:scale-125 hover:bounce focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none" aria-label="YouTube">
