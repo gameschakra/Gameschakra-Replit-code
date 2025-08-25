@@ -23,6 +23,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { scheduleSitemapGeneration } from "./utils/sitemapGenerator";
+import * as cron from 'node-cron';
+import { AnalyticsService } from './services/analyticsService';
 import path from "path";
 import * as fileService from "./services/fileService";
 
@@ -194,10 +196,41 @@ app.use((req, res, next) => {
     // Generate sitemap on server start and schedule regeneration
     const sitemapInterval = scheduleSitemapGeneration();
     
+    // Initialize analytics service
+    const analyticsService = new AnalyticsService();
+    
+    // Schedule nightly analytics aggregation at 2:00 AM
+    const analyticsJob = cron.schedule('0 2 * * *', async () => {
+      try {
+        log('🔄 Running nightly analytics aggregation...');
+        
+        // Aggregate yesterday's data
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const targetDate = yesterday.toISOString().split('T')[0];
+        
+        await analyticsService.aggregateDaily(targetDate);
+        
+        // Clean old events (keep 60 days)
+        await analyticsService.cleanOldEvents(60);
+        
+        log('✅ Nightly analytics aggregation completed');
+      } catch (error) {
+        console.error('❌ Analytics aggregation failed:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: process.env.TZ || 'UTC'
+    });
+    
+    log('📊 Analytics cron job scheduled for 2:00 AM daily');
+    
     // Clean up interval on server close
     server.on('close', () => {
       clearInterval(sitemapInterval);
+      analyticsJob.stop();
       log('Sitemap generation stopped');
+      log('Analytics cron job stopped');
     });
   });
 })();

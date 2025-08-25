@@ -15,6 +15,7 @@ import * as thumbnailService from "./services/thumbnailService";
 import * as thumbnailManager from "./services/thumbnailManager";
 import * as gameService from "./services/gameService";
 import { isAdmin, isAuthenticated, loadUser } from "./middleware/auth";
+import { analyticsTracker } from "./middleware/analytics";
 import { z } from "zod";
 import { 
   insertUserSchema, insertGameSchema, insertCategorySchema, 
@@ -112,66 +113,64 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     res.status(statusCode).json(healthCheck);
   });
 
-  // Configure CORS headers for all requests - consistent approach for both dev & prod
+  // Configure CORS headers for all requests - dev-safe, prod-safe
   app.use((req, res, next) => {
-    // Get the origin from request headers or default to an empty string
-    const origin = req.headers.origin || '';
+    const isProd = process.env.NODE_ENV === 'production';
+    const origin = req.headers.origin;
     
-    // Always set the specific requesting origin for CORS
-    // This is crucial for credentials to work - we can't use wildcard * with credentials
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    } else if (process.env.NODE_ENV !== 'production') {
-      // In development, if there's no origin header, allow all origins 
-      // (needed for some tests and tools like curl)
-      res.setHeader('Access-Control-Allow-Origin', '*');
+    // Define allowed origins
+    const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'];
+    const PROD_ORIGINS = ['https://gameschakra.com', 'https://www.gameschakra.com', 'http://gameschakra.com', 'http://www.gameschakra.com'];
+    const ALLOWED_ORIGINS = isProd ? PROD_ORIGINS : DEV_ORIGINS;
+    
+    // Set CORS origin based on environment
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Vary', 'Origin');
+    } else if (!isProd) {
+      // In development, be more permissive for debugging
+      res.header('Access-Control-Allow-Origin', origin || '*');
     }
     
     // Set complete CORS headers
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie, Content-Disposition');
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie, Content-Disposition');
+    res.header('Access-Control-Max-Age', '86400');
     
-    // Respond immediately to preflight OPTIONS requests
+    // Handle preflight requests
     if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
+      return res.sendStatus(204);
     }
     
     next();
   });
 
-  // Configure session with PostgreSQL store for persistent sessions
-  // Detect whether we're running in Replit development or production environment
-  const isReplitDev = process.env.REPL_ID && process.env.REPL_OWNER && !process.env.REPL_SLUG;
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Configure session - dev-safe, prod-safe
+  const isProd = process.env.NODE_ENV === 'production';
   
-  console.log(`Setting up session for environment: ${isReplitDev ? 'Replit Dev' : isProduction ? 'Production' : 'Development'}`);
-  console.log(`Session config: secure=${isProduction}, sameSite=${isProduction ? 'strict' : 'lax'}, domain=${isProduction ? process.env.COOKIE_DOMAIN || 'not set' : 'localhost'}`);
+  console.log(`Setting up session for environment: ${isProd ? 'Production' : 'Development'}`);
+  console.log(`Session config: secure=${isProd}, sameSite=${isProd ? 'none' : 'lax'}, domain=${isProd ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : 'undefined'}`);
   
-  // Session configuration - using memory store for now (simplifies development)
-  // Later we can implement PostgreSQL session store when needed
+  // Set trust proxy for session handling
+  app.set('trust proxy', 1);
   
   const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || "gamehub-secret",
-    resave: false, // Don't save session if unmodified 
-    saveUninitialized: false, // Don't create session until something is stored
-    cookie: {
-      secure: isProduction, // Use HTTPS in production
-      sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin HTTPS behind proxy
-      httpOnly: true, // Prevent XSS
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-      domain: isProduction ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : undefined
-    },
     name: 'gamehub.sid',
-    rolling: true, // Extend session on activity
-    proxy: true, // Trust reverse proxy for secure cookies
-    // Add session store validation
-    genid: () => {
-      return crypto.randomUUID();
-    }
+    secret: process.env.SESSION_SECRET || "gamehub-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: isProd,          // false on localhost, true in production
+      sameSite: isProd ? 'none' : 'lax',
+      domain: isProd ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+    },
+    rolling: true,
+    proxy: true,
+    genid: () => crypto.randomUUID()
   });
   
   // Apply session middleware
@@ -222,6 +221,9 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
 
   // Create user loader middleware
   app.use(loadUser);
+
+  // Add analytics tracking middleware (for page views)
+  app.use(analyticsTracker);
 
   // API ROUTES
   const api = express.Router();

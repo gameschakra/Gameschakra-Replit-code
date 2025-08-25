@@ -74,6 +74,30 @@ export async function generateSitemap(baseUrl: string = 'https://gameschakra.com
     });
     
     urls.push({
+      loc: `${baseUrl}/cookies`,
+      changefreq: 'yearly',
+      priority: 0.3
+    });
+    
+    urls.push({
+      loc: `${baseUrl}/info-for-parents`,
+      changefreq: 'yearly',
+      priority: 0.3
+    });
+    
+    urls.push({
+      loc: `${baseUrl}/contact`,
+      changefreq: 'monthly',
+      priority: 0.4
+    });
+    
+    urls.push({
+      loc: `${baseUrl}/jobs`,
+      changefreq: 'monthly',
+      priority: 0.4
+    });
+    
+    urls.push({
       loc: `${baseUrl}/developers`,
       changefreq: 'monthly',
       priority: 0.4
@@ -85,36 +109,62 @@ export async function generateSitemap(baseUrl: string = 'https://gameschakra.com
       priority: 0.6
     });
     
-    // GC_SEO: Add categories with lastmod from updatedAt
-    const categoryData = await db.select().from(categories).orderBy(desc(categories.updatedAt));
-    
-    for (const category of categoryData) {
-      const lastModified = category.updatedAt ? new Date(category.updatedAt).toISOString() : new Date().toISOString();
+    // GC_SEO: Add categories - Postgres-safe query selecting only needed columns
+    try {
+      const categoryData = await db.select({
+        id: categories.id,
+        slug: categories.slug,
+        updatedAt: categories.createdAt // categories table doesn't have updatedAt, use createdAt
+      })
+      .from(categories)
+      .orderBy(desc(categories.id)) // Use id instead of updatedAt since categories don't have updatedAt
+      .limit(2000);
       
-      urls.push({
-        loc: `${baseUrl}/category/${escapeXml(category.slug)}`,
-        lastmod: lastModified,
-        changefreq: 'daily',
-        priority: 0.7
-      });
+      console.log(`Found ${categoryData.length} categories for sitemap`);
+      
+      for (const category of categoryData) {
+        const lastModified = category.updatedAt ? new Date(category.updatedAt).toISOString() : new Date().toISOString();
+        
+        urls.push({
+          loc: `${baseUrl}/category/${escapeXml(category.slug)}`,
+          lastmod: lastModified,
+          changefreq: 'daily',
+          priority: 0.7
+        });
+      }
+    } catch (categoryError) {
+      console.warn('Error fetching categories for sitemap:', categoryError);
+      // Continue without categories - don't fail the entire sitemap
     }
     
-    // GC_SEO: Add games - only published games, limit to latest 10k to avoid gigantic files
-    const gameData = await db.select()
+    // GC_SEO: Add games - Postgres-safe query selecting only needed columns
+    try {
+      const gameData = await db.select({
+        id: games.id,
+        slug: games.slug,
+        updatedAt: games.updatedAt,
+        status: games.status
+      })
       .from(games)
       .where(eq(games.status, 'published'))
       .orderBy(desc(games.updatedAt))
       .limit(10000);
-    
-    for (const game of gameData) {
-      const lastModified = game.updatedAt ? new Date(game.updatedAt).toISOString() : new Date().toISOString();
       
-      urls.push({
-        loc: `${baseUrl}/games/${escapeXml(game.slug)}`,
-        lastmod: lastModified,
-        changefreq: 'weekly',
-        priority: 0.6
-      });
+      console.log(`Found ${gameData.length} published games for sitemap`);
+      
+      for (const game of gameData) {
+        const lastModified = game.updatedAt ? new Date(game.updatedAt).toISOString() : new Date().toISOString();
+        
+        urls.push({
+          loc: `${baseUrl}/games/${escapeXml(game.slug)}`,
+          lastmod: lastModified,
+          changefreq: 'weekly',
+          priority: 0.6
+        });
+      }
+    } catch (gameError) {
+      console.warn('Error fetching games for sitemap:', gameError);
+      // Continue without games - don't fail the entire sitemap
     }
     
     // GC_SEO: Generate XML content with proper escaping
@@ -147,12 +197,18 @@ export async function generateSitemap(baseUrl: string = 'https://gameschakra.com
     };
     
     // Save sitemap to the public directory
-    const publicDir = path.join(process.cwd(), 'public');
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true });
+    try {
+      const publicDir = path.join(process.cwd(), 'public');
+      if (!fs.existsSync(publicDir)) {
+        fs.mkdirSync(publicDir, { recursive: true });
+      }
+      
+      fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml);
+      console.log(`Sitemap saved to public/sitemap.xml`);
+    } catch (writeError) {
+      console.warn('Failed to write sitemap to disk:', writeError);
+      // Don't fail - we can still return the XML content
     }
-    
-    fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml);
     
     console.log(`Sitemap generated with ${urls.length} URLs (cached for ${CACHE_TTL / 1000 / 60} minutes)`);
     return xml;
@@ -176,10 +232,22 @@ export async function generateSitemap(baseUrl: string = 'https://gameschakra.com
         return staticContent;
       }
     } catch (fallbackError) {
-      console.error('Fallback sitemap also failed:', fallbackError);
+      console.warn('Fallback sitemap also failed:', fallbackError);
     }
     
-    throw error;
+    // Last resort: return minimal sitemap
+    const minimalSitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </url>
+</urlset>`;
+    
+    console.log('Returning minimal sitemap as last resort');
+    return minimalSitemap;
   }
 }
 
@@ -193,10 +261,14 @@ export function scheduleSitemapGeneration(intervalHours: number = 24): NodeJS.Ti
   console.log(`Scheduling sitemap generation every ${intervalHours} hours`);
   
   // Generate sitemap immediately
-  generateSitemap().catch(console.error);
+  generateSitemap().catch((error) => {
+    console.warn('Initial sitemap generation failed:', error);
+  });
   
   // Then schedule recurring generation
   return setInterval(() => {
-    generateSitemap().catch(console.error);
+    generateSitemap().catch((error) => {
+      console.warn('Scheduled sitemap generation failed:', error);
+    });
   }, intervalMs);
 }

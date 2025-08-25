@@ -52,11 +52,11 @@ function Router() {
           <Route path="/category/:slug" component={GamesListByCategory} />
           <Route path="/games/:slug" component={GameDetailsPage} />
           <Route path="/challenges/:slug" component={({params}) => <ChallengePage params={params} />} />
-          <Route path="/admin" component={Dashboard} />
-          <Route path="/admin/:tab" component={Dashboard} />
           <Route path="/admin/analytics" component={AnalyticsDashboard} />
           <Route path="/admin/analytics/games/:id" component={GameAnalytics} />
           <Route path="/admin/blog/create" component={BlogCreate} />
+          <Route path="/admin" component={Dashboard} />
+          <Route path="/admin/:tab" component={Dashboard} />
           <Route path="/login" component={Login} />
           <Route path="/auth-test" component={AuthTest} />
           <Route path="/blog" component={BlogPage} />

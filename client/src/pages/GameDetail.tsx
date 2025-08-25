@@ -28,6 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 // GC_FIX(fullscreen): Element-based fullscreen with overlay fallback
 import FullscreenGameOverlay from "@/components/games/FullscreenGameOverlay";
+// Analytics tracking
+import { startGameSession, endGameSession, isSessionActive } from "@/lib/analytics";
 
 export default function GameDetail() {
   const { slug } = useParams();
@@ -230,7 +232,13 @@ export default function GameDetail() {
       const active = !!(document.fullscreenElement 
         || (document as any).webkitFullscreenElement 
         || (document as any).mozFullScreenElement);
-      if (!active) setOverlayFs(false);
+      if (!active) {
+        setOverlayFs(false);
+        // End analytics session when exiting fullscreen
+        if (game?.id && isSessionActive()) {
+          endGameSession(game.id);
+        }
+      }
     };
     document.addEventListener("fullscreenchange", onChange);
     document.addEventListener("webkitfullscreenchange", onChange as any);
@@ -240,17 +248,29 @@ export default function GameDetail() {
       document.removeEventListener("webkitfullscreenchange", onChange as any);
       document.removeEventListener("mozfullscreenchange", onChange as any);
     };
-  }, []);
+  }, [game?.id]);
 
   async function handleFullscreen() {
     try {
+      // Start analytics session when entering fullscreen
+      if (game?.id) {
+        startGameSession(game.id);
+      }
       await requestFs();
     } catch {
       setOverlayFs(true); // fallback
+      // Still start analytics session for overlay mode
+      if (game?.id) {
+        startGameSession(game.id);
+      }
     }
   }
 
   async function handleExitOverlay() {
+    // End analytics session when exiting fullscreen/overlay
+    if (game?.id && isSessionActive()) {
+      endGameSession(game.id);
+    }
     setOverlayFs(false);
     await exitFs();           // only exit FS
     // DO NOT navigate or alter slug/state

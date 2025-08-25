@@ -1,282 +1,252 @@
 import express, { Request, Response } from "express";
-import { storage } from "../storage";
 import { z } from "zod";
-import { InsertGameAnalytics, InsertTrafficSource } from "@shared/schema";
-import { getDateDaysAgo, getCurrentDate } from "../utils";
-import { processRequestForAnalytics } from "../services/deviceDetectionService";
+import { isAdmin } from "../middleware/auth";
+import { logPlayEvent } from "../middleware/analytics";
+import { AnalyticsService } from "../services/analyticsService";
+import { db } from "../db";
+import { analyticsEvents, analyticsDaily, gamePlayDaily } from "@shared/schema";
 
 const router = express.Router();
+const analyticsService = new AnalyticsService();
 
-/**
- * Admin middleware - ensures only admin users can access certain endpoints
- */
-function isAdmin(req: Request, res: Response, next: express.NextFunction) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+// Validation schemas
+const dateRangeSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+});
 
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
+const playEventSchema = z.object({
+  gameId: z.number().int().positive()
+});
 
-  next();
+const playEndEventSchema = z.object({
+  gameId: z.number().int().positive(),
+  durationMs: z.number().int().min(0)
+});
+
+// Helper function to get date range with defaults
+function getDateRange(req: Request) {
+  const fromDate = req.query.from as string || getDateDaysAgo(7);
+  const toDate = req.query.to as string || getCurrentDate();
+  return { fromDate, toDate };
 }
 
-/**
- * Record a game play event
- */
-router.post('/record-play', async (req: Request, res: Response) => {
+function getDateDaysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split('T')[0];
+}
+
+function getCurrentDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+// Public endpoints for tracking events
+router.post('/play/start', async (req: Request, res: Response) => {
   try {
-    const { gameId, playDuration, score, completed, level, actions } = req.body;
+    const { gameId } = playEventSchema.parse(req.body);
     
-    // Add user info if authenticated
-    const userId = req.isAuthenticated() ? req.user.id : null;
+    logPlayEvent('play_start', gameId, req, res);
     
-    // Get device & traffic info
-    const deviceInfo = processRequestForAnalytics(req);
-    
-    // Create game analytics entry
-    const analytics = await storage.addGameAnalytics({
-      gameId,
-      userId,
-      sessionId: deviceInfo.sessionId,
-      deviceType: deviceInfo.deviceType,
-      browser: deviceInfo.browser,
-      os: deviceInfo.os,
-      playDuration,
-      level,
-      score,
-      completed,
-      actions
-    });
-    
-    // Record traffic source
-    await storage.addTrafficSource({
-      gameId,
-      userId,
-      sessionId: deviceInfo.sessionId,
-      source: deviceInfo.source,
-      referrer: deviceInfo.referrer
-    });
-    
-    // Increment game play count
-    await storage.incrementGamePlayCount(gameId);
-    
-    // If user is authenticated, add to recently played
-    if (userId) {
-      await storage.addRecentlyPlayed({
-        userId,
-        gameId
-      });
-    }
-    
-    res.status(200).json({ success: true });
+    res.json({ success: true });
   } catch (error) {
-    console.error("Error recording play:", error);
-    res.status(500).json({ error: "Failed to record play data" });
+    console.error('Error logging play start:', error);
+    res.status(400).json({ error: 'Invalid request' });
   }
 });
 
-/**
- * Get analytics dashboard data
- */
-router.get('/dashboard', isAdmin, async (req: Request, res: Response) => {
+router.post('/play/end', async (req: Request, res: Response) => {
   try {
-    const startDate = req.query.startDate as string || getDateDaysAgo(30);
-    const endDate = req.query.endDate as string || getCurrentDate();
+    const { gameId, durationMs } = playEndEventSchema.parse(req.body);
     
-    // Get traffic sources for all games
-    const trafficSources = await storage.getTrafficSources(undefined, startDate, endDate);
+    logPlayEvent('play_end', gameId, req, res, durationMs);
     
-    // Aggregate traffic source data
-    const sources: Record<string, number> = {};
-    const referrers: Record<string, number> = {};
-    
-    trafficSources.forEach(source => {
-      // Aggregate by source type
-      sources[source.source] = (sources[source.source] || 0) + 1;
-      
-      // Aggregate by referrer if available
-      if (source.referrer) {
-        referrers[source.referrer] = (referrers[source.referrer] || 0) + 1;
-      }
-    });
-    
-    // Get all games for analytics
-    const games = await storage.getGames();
-    
-    // Get game analytics
-    const gamesAnalytics = await Promise.all(
-      games.map(async game => {
-        const analytics = await storage.getGameAnalytics(game.id, startDate, endDate);
-        
-        // Calculate total plays and by device
-        const totalPlays = analytics.length;
-        const deviceBreakdown: Record<string, number> = {};
-        const browserBreakdown: Record<string, number> = {};
-        const osBreakdown: Record<string, number> = {};
-        
-        analytics.forEach(a => {
-          if (a.deviceType) {
-            deviceBreakdown[a.deviceType] = (deviceBreakdown[a.deviceType] || 0) + 1;
-          }
-          
-          if (a.browser) {
-            browserBreakdown[a.browser] = (browserBreakdown[a.browser] || 0) + 1;
-          }
-          
-          if (a.os) {
-            osBreakdown[a.os] = (osBreakdown[a.os] || 0) + 1;
-          }
-        });
-        
-        return {
-          id: game.id,
-          title: game.title,
-          slug: game.slug,
-          totalPlays,
-          deviceBreakdown,
-          browserBreakdown,
-          osBreakdown
-        };
-      })
-    );
-    
-    // Sort games by total plays
-    const topGames = [...gamesAnalytics].sort((a, b) => b.totalPlays - a.totalPlays);
-    
-    // Aggregate device data across all games
-    const deviceAnalytics: Record<string, number> = {};
-    const browserAnalytics: Record<string, number> = {};
-    const osAnalytics: Record<string, number> = {};
-    
-    gamesAnalytics.forEach(game => {
-      Object.entries(game.deviceBreakdown).forEach(([key, value]) => {
-        deviceAnalytics[key] = (deviceAnalytics[key] || 0) + value;
-      });
-      
-      Object.entries(game.browserBreakdown).forEach(([key, value]) => {
-        browserAnalytics[key] = (browserAnalytics[key] || 0) + value;
-      });
-      
-      Object.entries(game.osBreakdown).forEach(([key, value]) => {
-        osAnalytics[key] = (osAnalytics[key] || 0) + value;
-      });
-    });
-    
-    res.json({
-      trafficData: {
-        sources,
-        referrers
-      },
-      deviceData: {
-        devices: deviceAnalytics,
-        browsers: browserAnalytics,
-        os: osAnalytics
-      },
-      topGames: topGames.slice(0, 10),
-      totalGamePlays: gamesAnalytics.reduce((acc, game) => acc + game.totalPlays, 0),
-      startDate,
-      endDate
-    });
+    res.json({ success: true });
   } catch (error) {
-    console.error("Error fetching analytics dashboard:", error);
-    res.status(500).json({ error: "Failed to fetch analytics data" });
+    console.error('Error logging play end:', error);
+    res.status(400).json({ error: 'Invalid request' });
   }
 });
 
-/**
- * Get analytics for a specific game
- */
-router.get('/games/:id', isAdmin, async (req: Request, res: Response) => {
+// Admin-only analytics endpoints
+router.get('/summary', isAdmin, async (req: Request, res: Response) => {
   try {
-    const gameId = parseInt(req.params.id);
-    const startDate = req.query.startDate as string || getDateDaysAgo(30);
-    const endDate = req.query.endDate as string || getCurrentDate();
+    const { fromDate, toDate } = getDateRange(req);
     
-    // Get game details
-    const game = await storage.getGameById(gameId);
-    if (!game) {
-      return res.status(404).json({ error: "Game not found" });
-    }
+    // Validate date range
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
     
-    // Get game analytics
-    const analytics = await storage.getGameAnalytics(gameId, startDate, endDate);
+    const summary = await analyticsService.getSummary(fromDate, toDate);
     
-    // Get traffic sources
-    const trafficSources = await storage.getTrafficSources(gameId, startDate, endDate);
-    
-    // Aggregate data by device, browser, OS
-    const deviceBreakdown: Record<string, number> = {};
-    const browserBreakdown: Record<string, number> = {};
-    const osBreakdown: Record<string, number> = {};
-    const sourcesBreakdown: Record<string, number> = {};
-    const referrersBreakdown: Record<string, number> = {};
-    const playByDate: Record<string, number> = {};
-    
-    // Analyze game analytics
-    analytics.forEach(a => {
-      if (a.deviceType) {
-        deviceBreakdown[a.deviceType] = (deviceBreakdown[a.deviceType] || 0) + 1;
-      }
-      
-      if (a.browser) {
-        browserBreakdown[a.browser] = (browserBreakdown[a.browser] || 0) + 1;
-      }
-      
-      if (a.os) {
-        osBreakdown[a.os] = (osBreakdown[a.os] || 0) + 1;
-      }
-      
-      if (a.playDate) {
-        playByDate[a.playDate] = (playByDate[a.playDate] || 0) + 1;
-      }
-    });
-    
-    // Analyze traffic sources
-    trafficSources.forEach(s => {
-      sourcesBreakdown[s.source] = (sourcesBreakdown[s.source] || 0) + 1;
-      
-      if (s.referrer) {
-        referrersBreakdown[s.referrer] = (referrersBreakdown[s.referrer] || 0) + 1;
-      }
-    });
-    
-    // Calculate completed rates, average scores, etc.
-    const totalPlays = analytics.length;
-    const completedPlays = analytics.filter(a => a.completed).length;
-    const completionRate = totalPlays > 0 ? (completedPlays / totalPlays) * 100 : 0;
-    
-    // Calculate average score (if applicable)
-    const scores = analytics.filter(a => a.score !== null && a.score !== undefined).map(a => a.score!);
-    const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    
-    // Calculate average play duration
-    const durations = analytics.filter(a => a.playDuration !== null && a.playDuration !== undefined).map(a => a.playDuration!);
-    const averageDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
-    
-    res.json({
-      game,
-      analytics: {
-        totalPlays,
-        completedPlays,
-        completionRate,
-        averageScore,
-        averageDuration,
-        deviceBreakdown,
-        browserBreakdown,
-        osBreakdown,
-        sourcesBreakdown,
-        referrersBreakdown,
-        playByDate
-      },
-      startDate,
-      endDate
-    });
+    res.json(summary);
   } catch (error) {
-    console.error("Error fetching game analytics:", error);
-    res.status(500).json({ error: "Failed to fetch game analytics" });
+    console.error('Error getting analytics summary:', error);
+    res.status(500).json({ error: 'Failed to get analytics summary' });
   }
 });
+
+router.get('/timeseries', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const metric = req.query.metric as string || 'visits';
+    
+    if (!['visits', 'starts'].includes(metric)) {
+      return res.status(400).json({ error: 'Invalid metric. Must be "visits" or "starts"' });
+    }
+    
+    // Validate date range
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    
+    const timeseries = await analyticsService.getTimeSeries(metric as 'visits' | 'starts', fromDate, toDate);
+    
+    res.json(timeseries);
+  } catch (error) {
+    console.error('Error getting timeseries data:', error);
+    res.status(500).json({ error: 'Failed to get timeseries data' });
+  }
+});
+
+router.get('/top-games', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    // Validate date range
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    
+    const topGames = await analyticsService.getTopGames(fromDate, toDate, Math.min(limit, 100));
+    
+    res.json(topGames);
+  } catch (error) {
+    console.error('Error getting top games:', error);
+    res.status(500).json({ error: 'Failed to get top games' });
+  }
+});
+
+router.get('/devices', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    
+    // Validate date range
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    
+    const deviceStats = await analyticsService.getDeviceStats(fromDate, toDate);
+    
+    res.json(deviceStats);
+  } catch (error) {
+    console.error('Error getting device stats:', error);
+    res.status(500).json({ error: 'Failed to get device stats' });
+  }
+});
+
+router.get('/referrers', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    // Validate date range
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    
+    const referrerStats = await analyticsService.getReferrerStats(fromDate, toDate, Math.min(limit, 100));
+    
+    res.json(referrerStats);
+  } catch (error) {
+    console.error('Error getting referrer stats:', error);
+    res.status(500).json({ error: 'Failed to get referrer stats' });
+  }
+});
+
+router.get('/online-now', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // Get summary for current day to get online-now count
+    const today = getCurrentDate();
+    const summary = await analyticsService.getSummary(today, today);
+    
+    res.json({ onlineNow: summary.onlineNow });
+  } catch (error) {
+    console.error('Error getting online count:', error);
+    res.status(500).json({ error: 'Failed to get online count' });
+  }
+});
+
+// Manual aggregation endpoint (admin-only)
+router.post('/aggregate', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const day = req.query.day as string || getCurrentDate();
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    
+    await analyticsService.aggregateDaily(day);
+    
+    res.json({ success: true, message: `Analytics aggregated for ${day}` });
+  } catch (error) {
+    console.error('Error running manual aggregation:', error);
+    res.status(500).json({ error: 'Failed to run aggregation' });
+  }
+});
+
+// Development only: debug endpoints
+if (process.env.NODE_ENV !== 'production') {
+  // Seed test data
+  router.post('/debug/seed', async (req: Request, res: Response) => {
+    try {
+      const hours = parseInt(req.query.hours as string) || 24;
+      await analyticsService.debugSeed({ hours });
+      res.json({ 
+        success: true, 
+        message: `Seeded analytics data for ${hours} hours` 
+      });
+    } catch (error: any) {
+      console.error('Debug seed error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Run aggregation for today
+  router.post('/debug/aggregate', async (req: Request, res: Response) => {
+    try {
+      const day = req.query.day as string;
+      const targetDate = day ? new Date(day) : new Date();
+      
+      await analyticsService.debugAggregateDay(targetDate);
+      res.json({ 
+        success: true, 
+        message: `Aggregated data for ${targetDate.toISOString().split('T')[0]}` 
+      });
+    } catch (error: any) {
+      console.error('Debug aggregate error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  // Clear all analytics data (careful!)
+  router.delete('/debug/clear', async (req: Request, res: Response) => {
+    try {
+      await db.delete(analyticsEvents);
+      await db.delete(analyticsDaily);
+      await db.delete(gamePlayDaily);
+      
+      res.json({ 
+        success: true, 
+        message: 'All analytics data cleared' 
+      });
+    } catch (error: any) {
+      console.error('Debug clear error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+}
 
 export default router;

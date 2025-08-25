@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, pgEnum, jsonb, date, time } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, pgEnum, jsonb, date, time, bigint, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -346,3 +346,60 @@ export type InsertGameAnalytics = z.infer<typeof insertGameAnalyticsSchema>;
 
 export type TrafficSource = typeof trafficSources.$inferSelect;
 export type InsertTrafficSource = z.infer<typeof insertTrafficSourceSchema>;
+
+// New Privacy-Friendly Analytics Tables
+// 1) Raw events (60d retention)
+export const analyticsEvents = pgTable("analytics_events", {
+  id: serial("id").primaryKey(),
+  ts: timestamp("ts").defaultNow().notNull(),
+  eventType: text("event_type").notNull(),
+  visitorId: text("visitor_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  path: text("path").notNull(),
+  gameId: integer("game_id"),
+  durationMs: integer("duration_ms"),
+  device: text("device").notNull(),
+  referrerHost: text("referrer_host"),
+  country: text("country"),
+});
+
+// 2) Daily site metrics
+export const analyticsDaily = pgTable("analytics_daily", {
+  day: date("day").primaryKey(),
+  visits: bigint("visits", { mode: "number" }).notNull(),
+  uniques: bigint("uniques", { mode: "number" }).notNull(),
+  gameStarts: bigint("game_starts", { mode: "number" }).notNull(),
+  avgPlayMs: bigint("avg_play_ms", { mode: "number" }).notNull(),
+  mobilePct: numeric("mobile_pct", { precision: 5, scale: 2 }).notNull(),
+  desktopPct: numeric("desktop_pct", { precision: 5, scale: 2 }).notNull(),
+});
+
+// 3) Daily per-game stats
+export const gamePlayDaily = pgTable("game_play_daily", {
+  day: date("day").notNull(),
+  gameId: integer("game_id").notNull(),
+  starts: bigint("starts", { mode: "number" }).notNull(),
+  avgDurationMs: bigint("avg_duration_ms", { mode: "number" }).notNull(),
+});
+
+// Schema for inserting analytics events
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({
+  id: true,
+  ts: true,
+});
+
+// Schema for inserting daily analytics
+export const insertAnalyticsDailySchema = createInsertSchema(analyticsDaily);
+
+// Schema for inserting game play daily
+export const insertGamePlayDailySchema = createInsertSchema(gamePlayDaily);
+
+// Types for new analytics tables
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+
+export type AnalyticsDaily = typeof analyticsDaily.$inferSelect;
+export type InsertAnalyticsDaily = z.infer<typeof insertAnalyticsDailySchema>;
+
+export type GamePlayDaily = typeof gamePlayDaily.$inferSelect;
+export type InsertGamePlayDaily = z.infer<typeof insertGamePlayDailySchema>;
