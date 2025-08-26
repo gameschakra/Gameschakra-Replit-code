@@ -52,6 +52,22 @@ class AnalyticsQueue {
 
 const analyticsQueue = new AnalyticsQueue();
 
+// Safe cookie parsing helper
+function getCookieMap(req: Request): Record<string,string> {
+  // 1) cookie-parser output
+  const c: any = (req as any).cookies;
+  if (c && typeof c === 'object') return c as Record<string,string>;
+
+  // 2) manual parse from header
+  const raw = req.headers?.cookie || '';
+  const out: Record<string,string> = {};
+  raw.split(';').forEach(kv => {
+    const i = kv.indexOf('=');
+    if (i > -1) out[kv.slice(0,i).trim()] = decodeURIComponent(kv.slice(i+1).trim());
+  });
+  return out;
+}
+
 // Bot detection patterns
 const BOT_PATTERNS = [
   /bot/i,
@@ -212,10 +228,27 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
   }
 
   try {
-    const visitorId = generateVisitorId(req, res);
-    const sessionId = generateSessionId(req, res);
-    const device = detectDevice(userAgent);
-    const referrerHost = extractReferrerHost(req.headers.referer);
+    // Safe cookie parsing
+    const cookies = getCookieMap(req);
+    let visitorId = cookies['gc_vid'];
+    let sessionId = cookies['gc_sid'];
+
+    // Fallbacks if missing
+    if (!visitorId) visitorId = crypto.randomUUID();
+    if (!sessionId) sessionId = crypto.randomUUID();
+
+    // Guard optional fields
+    const ref = (req.get('referer') || req.get('referrer') || '').trim();
+    const referrerHost = ref ? (() => {
+      try {
+        return new URL(ref).hostname;
+      } catch {
+        return null;
+      }
+    })() : null;
+    
+    const ua = (req.get('user-agent') || '').toLowerCase();
+    const device: 'mobile'|'desktop' = /mobile|iphone|android/i.test(ua) ? 'mobile' : 'desktop';
     const country = extractCountry(req.headers);
 
     // Create analytics event
@@ -259,39 +292,27 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
       console.warn('[analytics] Dropping non-numeric gameId', gameId);
     }
 
-    // Robust cookie parsing - handle missing req.cookies gracefully
-    const rawCookie = (req.headers.cookie ?? '');
-    // tiny helper to parse a single cookie out of header if req.cookies is undefined
-    const getFromHeader = (name: string) =>
-      rawCookie.split(';').map(s => s.trim()).find(s => s.startsWith(name + '='))?.split('=')[1];
+    // Safe cookie parsing
+    const cookies = getCookieMap(req);
+    let visitorId = cookies['gc_vid'] || gcVid;
+    let sessionId = cookies['gc_sid'];
 
-    const cookies = (req as any).cookies ?? {};
-    let visitorId = cookies.gc_vid || getFromHeader('gc_vid')
-                  || (req.headers['x-gc-vid'] as string)
-                  || gcVid;
+    // Fallbacks if missing
+    if (!visitorId) visitorId = crypto.randomUUID();
+    if (!sessionId) sessionId = crypto.randomUUID();
 
-    if (!visitorId) {
-      visitorId = crypto.randomUUID().replace(/-/g, '');
-      // set a non-HttpOnly cookie so frontend can reuse it
+    // Guard optional fields
+    const ref = (req.get('referer') || req.get('referrer') || '').trim();
+    const referrerHost = ref ? (() => {
       try {
-        res.cookie('gc_vid', visitorId, {
-          domain: '.gameschakra.com', path: '/',
-          httpOnly: false, secure: true, sameSite: 'none',
-          maxAge: 1000 * 60 * 60 * 24 * 400
-        });
-      } catch (cookieError) {
-        console.warn('[analytics] Failed to set gc_vid cookie:', cookieError);
+        return new URL(ref).hostname;
+      } catch {
+        return null;
       }
-      console.warn('[analytics] gc_vid missing; generated new visitorId');
-    }
-
-    let sessionId = cookies.gc_sid || getFromHeader('gc_sid');
-    if (!sessionId) {
-      sessionId = generateSessionId(req, res);
-    }
-
-    const device = detectDevice(userAgent);
-    const referrerHost = extractReferrerHost(req.headers.referer);
+    })() : null;
+    
+    const ua = (req.get('user-agent') || '').toLowerCase();
+    const device: 'mobile'|'desktop' = /mobile|iphone|android/i.test(ua) ? 'mobile' : 'desktop';
     const country = extractCountry(req.headers);
 
     const event: AnalyticsEvent = {

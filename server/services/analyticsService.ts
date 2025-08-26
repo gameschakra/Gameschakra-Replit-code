@@ -338,7 +338,7 @@ export class AnalyticsService {
             visits: metrics.visits,
             uniques: metrics.uniques,
             gameStarts: metrics.gameStarts,
-            // avgPlayMs already cast to bigint in SQL query
+            // avgPlayMs already cast to bigint in SQL query  
             avgPlayMs: metrics.avgPlayMs,
             mobilePct: mobilePct.toString(),
             desktopPct: desktopPct.toString()
