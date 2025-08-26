@@ -240,7 +240,7 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
 }
 
 // Helper function to log play events
-export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: number, req: Request, res: Response, durationMs?: number) {
+export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: number | undefined, req: Request, res: Response, durationMs?: number) {
   // Skip if DNT header is set
   if (req.headers['dnt'] === '1') {
     return;
@@ -253,6 +253,11 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
   }
 
   try {
+    // Guard log for invalid gameId
+    if (gameId && typeof gameId !== 'number') {
+      console.warn('[analytics] Dropping non-numeric gameId', gameId);
+    }
+
     const visitorId = req.cookies['gc_vid'] || generateVisitorId(req, res);
     const sessionId = req.cookies['gc_sid'] || generateSessionId(req, res);
     const device = detectDevice(userAgent);

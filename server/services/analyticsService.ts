@@ -337,7 +337,8 @@ export class AnalyticsService {
             visits: metrics.visits,
             uniques: metrics.uniques,
             gameStarts: metrics.gameStarts,
-            avgPlayMs: metrics.avgPlayMs,
+            // round to bigint to match column type and avoid 2AM cron failures
+            avgPlayMs: Math.ceil(metrics.avgPlayMs),
             mobilePct: mobilePct.toString(),
             desktopPct: desktopPct.toString()
           })
@@ -381,7 +382,8 @@ export class AnalyticsService {
               day: targetDate,
               gameId: gameMetric.gameId!,
               starts: gameMetric.starts,
-              avgDurationMs: gameMetric.avgDurationMs
+              // align to bigint
+              avgDurationMs: Math.ceil(gameMetric.avgDurationMs)
             })
             .onConflictDoUpdate({
               target: [gamePlayDaily.day, gamePlayDaily.gameId],

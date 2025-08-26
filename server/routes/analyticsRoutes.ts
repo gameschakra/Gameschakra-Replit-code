@@ -4,7 +4,8 @@ import { isAdmin } from "../middleware/auth";
 import { logPlayEvent } from "../middleware/analytics";
 import { AnalyticsService } from "../services/analyticsService";
 import { db } from "../db";
-import { analyticsEvents, analyticsDaily, gamePlayDaily } from "@shared/schema";
+import { analyticsEvents, analyticsDaily, gamePlayDaily, games } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const router = express.Router();
 const analyticsService = new AnalyticsService();
@@ -16,13 +17,33 @@ const dateRangeSchema = z.object({
 });
 
 const playEventSchema = z.object({
-  gameId: z.number().int().positive()
+  gameId: z.number().int().positive().optional(),
+  gameSlug: z.string().min(1).optional()
+}).refine(v => v.gameId || v.gameSlug, {
+  message: "Either gameId or gameSlug is required"
 });
 
 const playEndEventSchema = z.object({
-  gameId: z.number().int().positive(),
+  gameId: z.number().int().positive().optional(),
+  gameSlug: z.string().min(1).optional(),
   durationMs: z.number().int().min(0)
+}).refine(v => v.gameId || v.gameSlug, {
+  message: "Either gameId or gameSlug is required"
 });
+
+async function resolveGameId(input: { gameId?: number; gameSlug?: string }): Promise<number | null> {
+  // If numeric id is provided, verify it exists
+  if (input.gameId) {
+    const rows = await db.select({ id: games.id }).from(games).where(eq(games.id, input.gameId)).limit(1);
+    if (rows.length > 0) return input.gameId;
+  }
+  // Else try by slug
+  if (input.gameSlug) {
+    const rows = await db.select({ id: games.id }).from(games).where(eq(games.slug, input.gameSlug)).limit(1);
+    if (rows.length > 0) return rows[0].id;
+  }
+  return null;
+}
 
 // Helper function to get date range with defaults
 function getDateRange(req: Request) {
@@ -44,27 +65,33 @@ function getCurrentDate(): string {
 // Public endpoints for tracking events
 router.post('/play/start', async (req: Request, res: Response) => {
   try {
-    const { gameId } = playEventSchema.parse(req.body);
-    
-    logPlayEvent('play_start', gameId, req, res);
-    
+    const parsed = playEventSchema.parse(req.body);
+    const resolvedId = await resolveGameId(parsed);
+    if (!resolvedId) {
+      console.warn('[analytics] play/start could not resolve gameId from', parsed);
+    }
+    logPlayEvent('play_start', resolvedId ?? undefined, req, res);
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error logging play start:', error);
-    res.status(400).json({ error: 'Invalid request' });
+    res.status(400).json({ error: 'Invalid play start payload' });
   }
 });
 
 router.post('/play/end', async (req: Request, res: Response) => {
   try {
-    const { gameId, durationMs } = playEndEventSchema.parse(req.body);
-    
-    logPlayEvent('play_end', gameId, req, res, durationMs);
-    
+    const parsed = playEndEventSchema.parse(req.body);
+    const resolvedId = await resolveGameId(parsed);
+    if (!resolvedId) {
+      console.warn('[analytics] play/end could not resolve gameId from', parsed);
+    }
+    logPlayEvent('play_end', resolvedId ?? undefined, req, res, parsed.durationMs);
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error logging play end:', error);
-    res.status(400).json({ error: 'Invalid request' });
+    res.status(400).json({ error: 'Invalid play end payload' });
   }
 });
 
