@@ -20,6 +20,7 @@ if (process.env.NODE_ENV === 'production' && process.env.SESSION_SECRET === 'you
 }
 
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from 'cookie-parser';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { scheduleSitemapGeneration } from "./utils/sitemapGenerator";
@@ -37,6 +38,7 @@ app.set('trust proxy', 1);
 const bodyLimit = process.env.BODY_PARSER_LIMIT || '50mb';
 app.use(express.json({ limit: bodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
+app.use(cookieParser());
 
 // Serve static files from public directory (for ads.txt, sitemap.xml, etc.)
 app.use(express.static('public', {

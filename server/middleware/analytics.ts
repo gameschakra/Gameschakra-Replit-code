@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import CryptoJS from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { analyticsEvents } from '@shared/schema';
 import { db } from '../db';
 
@@ -239,8 +240,8 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
   next();
 }
 
-// Helper function to log play events
-export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: number | undefined, req: Request, res: Response, durationMs?: number) {
+// Helper function to log play events  
+export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: number | undefined, req: Request, res: Response, durationMs?: number, gcVid?: string) {
   // Skip if DNT header is set
   if (req.headers['dnt'] === '1') {
     return;
@@ -258,8 +259,37 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
       console.warn('[analytics] Dropping non-numeric gameId', gameId);
     }
 
-    const visitorId = req.cookies['gc_vid'] || generateVisitorId(req, res);
-    const sessionId = req.cookies['gc_sid'] || generateSessionId(req, res);
+    // Robust cookie parsing - handle missing req.cookies gracefully
+    const rawCookie = (req.headers.cookie ?? '');
+    // tiny helper to parse a single cookie out of header if req.cookies is undefined
+    const getFromHeader = (name: string) =>
+      rawCookie.split(';').map(s => s.trim()).find(s => s.startsWith(name + '='))?.split('=')[1];
+
+    const cookies = (req as any).cookies ?? {};
+    let visitorId = cookies.gc_vid || getFromHeader('gc_vid')
+                  || (req.headers['x-gc-vid'] as string)
+                  || gcVid;
+
+    if (!visitorId) {
+      visitorId = crypto.randomUUID().replace(/-/g, '');
+      // set a non-HttpOnly cookie so frontend can reuse it
+      try {
+        res.cookie('gc_vid', visitorId, {
+          domain: '.gameschakra.com', path: '/',
+          httpOnly: false, secure: true, sameSite: 'none',
+          maxAge: 1000 * 60 * 60 * 24 * 400
+        });
+      } catch (cookieError) {
+        console.warn('[analytics] Failed to set gc_vid cookie:', cookieError);
+      }
+      console.warn('[analytics] gc_vid missing; generated new visitorId');
+    }
+
+    let sessionId = cookies.gc_sid || getFromHeader('gc_sid');
+    if (!sessionId) {
+      sessionId = generateSessionId(req, res);
+    }
+
     const device = detectDevice(userAgent);
     const referrerHost = extractReferrerHost(req.headers.referer);
     const country = extractCountry(req.headers);

@@ -18,7 +18,8 @@ const dateRangeSchema = z.object({
 
 const playEventSchema = z.object({
   gameId: z.number().int().positive().optional(),
-  gameSlug: z.string().min(1).optional()
+  gameSlug: z.string().min(1).optional(),
+  gcVid: z.string().optional()
 }).refine(v => v.gameId || v.gameSlug, {
   message: "Either gameId or gameSlug is required"
 });
@@ -26,7 +27,8 @@ const playEventSchema = z.object({
 const playEndEventSchema = z.object({
   gameId: z.number().int().positive().optional(),
   gameSlug: z.string().min(1).optional(),
-  durationMs: z.number().int().min(0)
+  durationMs: z.number().int().min(0),
+  gcVid: z.string().optional()
 }).refine(v => v.gameId || v.gameSlug, {
   message: "Either gameId or gameSlug is required"
 });
@@ -67,10 +69,15 @@ router.post('/play/start', async (req: Request, res: Response) => {
   try {
     const parsed = playEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
+    
     if (!resolvedId) {
+      if (!parsed.gameId && !parsed.gameSlug) {
+        return res.status(400).json({ error: 'Missing gameId or gameSlug' });
+      }
       console.warn('[analytics] play/start could not resolve gameId from', parsed);
     }
-    logPlayEvent('play_start', resolvedId ?? undefined, req, res);
+    
+    logPlayEvent('play_start', resolvedId ?? undefined, req, res, undefined, parsed.gcVid);
 
     res.json({ success: true });
   } catch (error) {
@@ -83,10 +90,20 @@ router.post('/play/end', async (req: Request, res: Response) => {
   try {
     const parsed = playEndEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
+    
     if (!resolvedId) {
+      if (!parsed.gameId && !parsed.gameSlug) {
+        return res.status(400).json({ error: 'Missing gameId or gameSlug' });
+      }
       console.warn('[analytics] play/end could not resolve gameId from', parsed);
     }
-    logPlayEvent('play_end', resolvedId ?? undefined, req, res, parsed.durationMs);
+    
+    if (parsed.durationMs < 0) {
+      console.warn('[analytics] play/end invalid duration:', parsed.durationMs);
+      return res.status(400).json({ error: 'Invalid duration' });
+    }
+    
+    logPlayEvent('play_end', resolvedId ?? undefined, req, res, parsed.durationMs, parsed.gcVid);
 
     res.json({ success: true });
   } catch (error) {

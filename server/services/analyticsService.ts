@@ -218,7 +218,8 @@ export class AnalyticsService {
           and(
             gte(analyticsEvents.ts, sql`${fromDate}::date`),
             lte(analyticsEvents.ts, sql`(${toDate}::date + interval '1 day')`),
-            sql`${analyticsEvents.gameId} IS NOT NULL`
+            sql`${analyticsEvents.gameId} IS NOT NULL`,
+            sql`${games.id} IS NOT NULL`   // ensure matched game only
           )
         )
         .groupBy(analyticsEvents.gameId, games.title, games.slug)
@@ -311,7 +312,7 @@ export class AnalyticsService {
           visits: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'page_view' THEN 1 END)`,
           uniques: sql<number>`COUNT(DISTINCT ${analyticsEvents.visitorId})`,
           gameStarts: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END)`,
-          avgPlayMs: sql<number>`COALESCE(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END), 0)`,
+          avgPlayMs: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`,
           mobileCount: sql<number>`COUNT(DISTINCT CASE WHEN ${analyticsEvents.device} = 'mobile' THEN ${analyticsEvents.visitorId} END)`,
           desktopCount: sql<number>`COUNT(DISTINCT CASE WHEN ${analyticsEvents.device} = 'desktop' THEN ${analyticsEvents.visitorId} END)`
         })
@@ -337,8 +338,8 @@ export class AnalyticsService {
             visits: metrics.visits,
             uniques: metrics.uniques,
             gameStarts: metrics.gameStarts,
-            // round to bigint to match column type and avoid 2AM cron failures
-            avgPlayMs: Math.ceil(metrics.avgPlayMs),
+            // avgPlayMs already cast to bigint in SQL query
+            avgPlayMs: metrics.avgPlayMs,
             mobilePct: mobilePct.toString(),
             desktopPct: desktopPct.toString()
           })
@@ -362,7 +363,7 @@ export class AnalyticsService {
         .select({
           gameId: analyticsEvents.gameId,
           starts: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END)`,
-          avgDurationMs: sql<number>`COALESCE(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END), 0)`
+          avgDurationMs: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
         })
         .from(analyticsEvents)
         .where(
@@ -382,8 +383,8 @@ export class AnalyticsService {
               day: targetDate,
               gameId: gameMetric.gameId!,
               starts: gameMetric.starts,
-              // align to bigint
-              avgDurationMs: Math.ceil(gameMetric.avgDurationMs)
+              // avgDurationMs already cast to bigint in SQL query
+              avgDurationMs: gameMetric.avgDurationMs
             })
             .onConflictDoUpdate({
               target: [gamePlayDaily.day, gamePlayDaily.gameId],
