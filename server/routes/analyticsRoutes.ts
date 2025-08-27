@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { z } from "zod";
+import crypto from "crypto";
 import { isAdmin } from "../middleware/auth";
 import { logPlayEvent } from "../middleware/analytics";
 import { AnalyticsService } from "../services/analyticsService";
@@ -34,16 +35,18 @@ const playEndEventSchema = z.object({
 });
 
 async function resolveGameId(input: { gameId?: number; gameSlug?: string }): Promise<number | null> {
-  // If numeric id is provided, verify it exists
-  if (input.gameId) {
+  // Priority 1: gameId (number) - verify it exists in games table
+  if (input.gameId && typeof input.gameId === 'number') {
     const rows = await db.select({ id: games.id }).from(games).where(eq(games.id, input.gameId)).limit(1);
     if (rows.length > 0) return input.gameId;
   }
-  // Else try by slug
-  if (input.gameSlug) {
+  
+  // Priority 2: gameSlug (string) - lookup by slug
+  if (input.gameSlug && typeof input.gameSlug === 'string') {
     const rows = await db.select({ id: games.id }).from(games).where(eq(games.slug, input.gameSlug)).limit(1);
     if (rows.length > 0) return rows[0].id;
   }
+  
   return null;
 }
 
@@ -64,26 +67,102 @@ function getCurrentDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+// Helper function to get visitor/session IDs with fallbacks
+function getVisitorSessionIds(req: Request): { visitorId: string, sessionId: string } {
+  const randomFallbackId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  
+  const visitorId = req.cookies?.gc_vid 
+                 ?? req.headers['x-visitor-id'] as string
+                 ?? (req as any).session?.visitorId
+                 ?? randomFallbackId();
+  
+  const sessionId = req.cookies?.gc_sid
+                 ?? req.headers['x-session-id'] as string  
+                 ?? (req as any).session?.sessionId
+                 ?? randomFallbackId();
+                 
+  return { visitorId, sessionId };
+}
+
 // Public endpoints for tracking events
+router.post('/page-view', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { visitorId, sessionId } = getVisitorSessionIds(req);
+    const path = req.body.path || req.path;
+    const referrer = req.body.referrer || req.headers.referer || req.headers.referrer;
+    
+    // Parse referrer host
+    let referrerHost: string | undefined;
+    if (referrer && typeof referrer === 'string') {
+      try {
+        const url = new URL(referrer);
+        referrerHost = url.hostname;
+      } catch {
+        referrerHost = undefined;
+      }
+    }
+    
+    // Device detection
+    const userAgent = req.headers['user-agent'] || '';
+    const device = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) 
+      ? 'mobile' 
+      : 'desktop';
+    
+    // Create page view event
+    const event = {
+      eventType: 'page_view' as const,
+      visitorId,
+      sessionId,
+      path,
+      referrerHost,
+      device,
+      ts: new Date()
+    };
+    
+    // Insert into database
+    await db.insert(analyticsEvents).values(event);
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error logging page view:', error);
+    return res.json({ success: true }); // Always return success to not break user flow
+  }
+});
+
 router.post('/play/start', async (req: Request, res: Response) => {
   res.type('application/json');
   try {
     const parsed = playEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
+    const { visitorId, sessionId } = getVisitorSessionIds(req);
     
     if (!resolvedId) {
-      if (!parsed.gameId && !parsed.gameSlug) {
-        return res.status(400).json({ error: 'Missing gameId or gameSlug' });
-      }
-      console.warn('[analytics] play/start could not resolve gameId from', parsed);
+      console.warn('[analytics] play/start could not resolve gameId/gameSlug', { 
+        payload: { gameId: parsed.gameId, gameSlug: parsed.gameSlug },
+        visitorId: visitorId.slice(0, 8) + '...'
+      });
+      // Don't insert invalid game events, but return success
+      return res.json({ success: true });
     }
     
-    logPlayEvent('play_start', resolvedId ?? undefined, req, res, undefined, parsed.gcVid);
-
-    res.json({ success: true });
+    // Create play start event
+    const event = {
+      eventType: 'play_start' as const,
+      visitorId,
+      sessionId,
+      path: req.path,
+      gameId: resolvedId,
+      device: /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop',
+      ts: new Date()
+    };
+    
+    await db.insert(analyticsEvents).values(event);
+    return res.json({ success: true });
+    
   } catch (error) {
     console.error('Error logging play start:', error);
-    res.status(400).json({ error: 'Invalid play start payload' });
+    return res.json({ success: true }); // Always return success
   }
 });
 
@@ -92,25 +171,40 @@ router.post('/play/end', async (req: Request, res: Response) => {
   try {
     const parsed = playEndEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
+    const { visitorId, sessionId } = getVisitorSessionIds(req);
     
     if (!resolvedId) {
-      if (!parsed.gameId && !parsed.gameSlug) {
-        return res.status(400).json({ error: 'Missing gameId or gameSlug' });
-      }
-      console.warn('[analytics] play/end could not resolve gameId from', parsed);
+      console.warn('[analytics] play/end could not resolve gameId/gameSlug', { 
+        payload: { gameId: parsed.gameId, gameSlug: parsed.gameSlug },
+        visitorId: visitorId.slice(0, 8) + '...'
+      });
+      // Don't insert invalid game events, but return success
+      return res.json({ success: true });
     }
     
     if (parsed.durationMs < 0) {
       console.warn('[analytics] play/end invalid duration:', parsed.durationMs);
-      return res.status(400).json({ error: 'Invalid duration' });
+      return res.json({ success: true }); // Return success, don't break flow
     }
     
-    logPlayEvent('play_end', resolvedId ?? undefined, req, res, parsed.durationMs, parsed.gcVid);
-
-    res.json({ success: true });
+    // Create play end event
+    const event = {
+      eventType: 'play_end' as const,
+      visitorId,
+      sessionId,
+      path: req.path,
+      gameId: resolvedId,
+      durationMs: parsed.durationMs,
+      device: /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop',
+      ts: new Date()
+    };
+    
+    await db.insert(analyticsEvents).values(event);
+    return res.json({ success: true });
+    
   } catch (error) {
     console.error('Error logging play end:', error);
-    res.status(400).json({ error: 'Invalid play end payload' });
+    return res.json({ success: true }); // Always return success
   }
 });
 
