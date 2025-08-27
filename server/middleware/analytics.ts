@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import CryptoJS from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
+import crypto, { randomUUID } from 'crypto';
 import { analyticsEvents } from '@shared/schema';
 import { db } from '../db';
 
@@ -228,14 +228,25 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
   }
 
   try {
-    // Safe cookie parsing
+    // Defensive cookie parsing with fallbacks
     const cookies = getCookieMap(req);
-    let visitorId = cookies['gc_vid'];
-    let sessionId = cookies['gc_sid'];
+    const visitorId = req.cookies?.gc_vid 
+                   ?? cookies['gc_vid']
+                   ?? (req as any).session?.visitorId
+                   ?? randomFallbackId();
+    
+    const sessionId = req.cookies?.gc_sid
+                   ?? cookies['gc_sid'] 
+                   ?? (req as any).session?.sessionId
+                   ?? randomFallbackId();
 
-    // Fallbacks if missing
-    if (!visitorId) visitorId = crypto.randomUUID();
-    if (!sessionId) sessionId = crypto.randomUUID();
+    // Warn if cookies were missing
+    if (!req.cookies?.gc_vid && !cookies['gc_vid'] && !(req as any).session?.visitorId) {
+      console.warn('[analytics] missing visitor/session cookie; using fallback', {
+        path: req.path,
+        ua: (req.headers['user-agent'] || '').slice(0, 120),
+      });
+    }
 
     // Guard optional fields
     const ref = (req.get('referer') || req.get('referrer') || '').trim();
@@ -248,7 +259,7 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
     })() : null;
     
     const ua = (req.get('user-agent') || '').toLowerCase();
-    const device: 'mobile'|'desktop' = /mobile|iphone|android/i.test(ua) ? 'mobile' : 'desktop';
+    const device = detectDevice(ua) || 'desktop'; // Default to desktop when unknown
     const country = extractCountry(req.headers);
 
     // Create analytics event
@@ -266,12 +277,15 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
     analyticsQueue.add(event);
 
   } catch (error) {
-    console.error('Analytics tracking error:', error);
+    console.warn('[analytics] tracking error (non-fatal):', error);
     // Don't break the request flow
   }
 
   next();
 }
+
+// Helper to create fallback IDs
+const randomFallbackId = () => randomUUID().replace(/-/g, '').slice(0, 32);
 
 // Helper function to log play events  
 export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: number | undefined, req: Request, res: Response, durationMs?: number, gcVid?: string) {
@@ -292,14 +306,26 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
       console.warn('[analytics] Dropping non-numeric gameId', gameId);
     }
 
-    // Safe cookie parsing
+    // Defensive cookie parsing with fallbacks
     const cookies = getCookieMap(req);
-    let visitorId = cookies['gc_vid'] || gcVid;
-    let sessionId = cookies['gc_sid'];
+    const visitorId = req.cookies?.gc_vid 
+                   ?? cookies['gc_vid']
+                   ?? (req as any).session?.visitorId
+                   ?? gcVid
+                   ?? randomFallbackId();
+    
+    const sessionId = req.cookies?.gc_sid
+                   ?? cookies['gc_sid'] 
+                   ?? (req as any).session?.sessionId
+                   ?? randomFallbackId();
 
-    // Fallbacks if missing
-    if (!visitorId) visitorId = crypto.randomUUID();
-    if (!sessionId) sessionId = crypto.randomUUID();
+    // Warn if cookies were missing
+    if (!req.cookies?.gc_vid && !cookies['gc_vid'] && !(req as any).session?.visitorId && !gcVid) {
+      console.warn('[analytics] missing visitor/session cookie; using fallback', {
+        path: req.path,
+        ua: (req.headers['user-agent'] || '').slice(0, 120),
+      });
+    }
 
     // Guard optional fields
     const ref = (req.get('referer') || req.get('referrer') || '').trim();
@@ -312,7 +338,7 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
     })() : null;
     
     const ua = (req.get('user-agent') || '').toLowerCase();
-    const device: 'mobile'|'desktop' = /mobile|iphone|android/i.test(ua) ? 'mobile' : 'desktop';
+    const device = detectDevice(ua) || 'desktop'; // Default to desktop when unknown
     const country = extractCountry(req.headers);
 
     const event: AnalyticsEvent = {
@@ -330,6 +356,7 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
     analyticsQueue.add(event);
 
   } catch (error) {
-    console.error('Play event logging error:', error);
+    console.warn('[analytics] play event logging error (non-fatal):', error);
+    // Always continue - don't break the flow
   }
 }

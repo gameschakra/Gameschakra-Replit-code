@@ -66,6 +66,7 @@ function getCurrentDate(): string {
 
 // Public endpoints for tracking events
 router.post('/play/start', async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const parsed = playEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
@@ -87,6 +88,7 @@ router.post('/play/start', async (req: Request, res: Response) => {
 });
 
 router.post('/play/end', async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const parsed = playEndEventSchema.parse(req.body);
     const resolvedId = await resolveGameId(parsed);
@@ -112,8 +114,81 @@ router.post('/play/end', async (req: Request, res: Response) => {
   }
 });
 
+// Public analytics endpoints (no auth required)
+router.get('/summary', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    const summary = await analyticsService.getSummary(fromDate, toDate);
+    res.json(summary);
+  } catch (error) {
+    console.error('Error getting analytics summary:', error);
+    res.status(500).json({ error: 'Failed to get analytics summary' });
+  }
+});
+
+router.get('/top-games', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const limit = parseInt(req.query.limit as string) || 20;
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    const topGames = await analyticsService.getTopGames(fromDate, toDate, Math.min(limit, 100));
+    res.json(topGames);
+  } catch (error) {
+    console.error('Error getting top games:', error);
+    res.status(500).json({ error: 'Failed to get top games' });
+  }
+});
+
+router.get('/timeseries', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const metric = req.query.metric as string || 'visits';
+    if (!['visits', 'starts'].includes(metric)) {
+      return res.status(400).json({ error: 'Invalid metric. Must be "visits" or "starts"' });
+    }
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    const timeseries = await analyticsService.getTimeSeries(metric as 'visits' | 'starts', fromDate, toDate);
+    res.json(timeseries);
+  } catch (error) {
+    console.error('Error getting timeseries data:', error);
+    res.status(500).json({ error: 'Failed to get timeseries data' });
+  }
+});
+
+router.get('/devices', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    const deviceStats = await analyticsService.getDeviceStats(fromDate, toDate);
+    res.json(deviceStats);
+  } catch (error) {
+    console.error('Error getting device stats:', error);
+    res.status(500).json({ error: 'Failed to get device stats' });
+  }
+});
+
+router.get('/referrers', async (req: Request, res: Response) => {
+  res.type('application/json');
+  try {
+    const { fromDate, toDate } = getDateRange(req);
+    const limit = parseInt(req.query.limit as string) || 20;
+    dateRangeSchema.parse({ from: fromDate, to: toDate });
+    const referrerStats = await analyticsService.getReferrerStats(fromDate, toDate, Math.min(limit, 100));
+    res.json(referrerStats);
+  } catch (error) {
+    console.error('Error getting referrer stats:', error);
+    res.status(500).json({ error: 'Failed to get referrer stats' });
+  }
+});
+
 // Admin-only analytics endpoints
-router.get('/summary', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/summary', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const { fromDate, toDate } = getDateRange(req);
     
@@ -129,7 +204,8 @@ router.get('/summary', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/timeseries', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/timeseries', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const { fromDate, toDate } = getDateRange(req);
     const metric = req.query.metric as string || 'visits';
@@ -150,7 +226,8 @@ router.get('/timeseries', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/top-games', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/top-games', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const { fromDate, toDate } = getDateRange(req);
     const limit = parseInt(req.query.limit as string) || 20;
@@ -167,7 +244,8 @@ router.get('/top-games', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/devices', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/devices', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const { fromDate, toDate } = getDateRange(req);
     
@@ -183,7 +261,8 @@ router.get('/devices', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/referrers', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/referrers', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     const { fromDate, toDate } = getDateRange(req);
     const limit = parseInt(req.query.limit as string) || 20;
@@ -200,7 +279,8 @@ router.get('/referrers', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/online-now', isAdmin, async (req: Request, res: Response) => {
+router.get('/admin/online-now', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
     // Get summary for current day to get online-now count
     const today = getCurrentDate();
@@ -214,21 +294,18 @@ router.get('/online-now', isAdmin, async (req: Request, res: Response) => {
 });
 
 // Manual aggregation endpoint (admin-only)
-router.post('/aggregate', isAdmin, async (req: Request, res: Response) => {
+router.post('/admin/aggregate', isAdmin, async (req: Request, res: Response) => {
+  res.type('application/json');
   try {
-    const day = req.query.day as string || getCurrentDate();
-    
-    // Validate date format
+    const day = String(req.query.day || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+      return res.status(400).json({ error: 'Invalid or missing day' });
     }
-    
     await analyticsService.aggregateDaily(day);
-    
-    res.json({ success: true, message: `Analytics aggregated for ${day}` });
-  } catch (error) {
-    console.error('Error running manual aggregation:', error);
-    res.status(500).json({ error: 'Failed to run aggregation' });
+    return res.json({ success: true, day, message: `Aggregated analytics for ${day}` });
+  } catch (e) {
+    console.error('aggregate error', e);
+    return res.status(500).json({ error: 'Aggregation failed' });
   }
 });
 
@@ -236,6 +313,7 @@ router.post('/aggregate', isAdmin, async (req: Request, res: Response) => {
 if (process.env.NODE_ENV !== 'production') {
   // Seed test data
   router.post('/debug/seed', async (req: Request, res: Response) => {
+    res.type('application/json');
     try {
       const hours = parseInt(req.query.hours as string) || 24;
       await analyticsService.debugSeed({ hours });
@@ -254,6 +332,7 @@ if (process.env.NODE_ENV !== 'production') {
 
   // Run aggregation for today
   router.post('/debug/aggregate', async (req: Request, res: Response) => {
+    res.type('application/json');
     try {
       const day = req.query.day as string;
       const targetDate = day ? new Date(day) : new Date();
@@ -274,6 +353,7 @@ if (process.env.NODE_ENV !== 'production') {
 
   // Clear all analytics data (careful!)
   router.delete('/debug/clear', async (req: Request, res: Response) => {
+    res.type('application/json');
     try {
       await db.delete(analyticsEvents);
       await db.delete(analyticsDaily);

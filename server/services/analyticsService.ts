@@ -44,7 +44,7 @@ export class AnalyticsService {
           visits: sql<number>`COALESCE(SUM(${analyticsDaily.visits}), 0)`,
           uniques: sql<number>`COALESCE(SUM(${analyticsDaily.uniques}), 0)`,
           gameStarts: sql<number>`COALESCE(SUM(${analyticsDaily.gameStarts}), 0)`,
-          avgPlayMs: sql<number>`COALESCE(AVG(${analyticsDaily.avgPlayMs}), 0)`
+          avgPlayMs: sql<number>`COALESCE(CEIL(AVG(${analyticsDaily.avgPlayMs}))::bigint, 0)`
         })
         .from(analyticsDaily)
         .where(
@@ -63,7 +63,7 @@ export class AnalyticsService {
             visits: sql<number>`COALESCE(COUNT(*), 0)`,
             uniques: sql<number>`COALESCE(COUNT(DISTINCT ${analyticsEvents.visitorId}), 0)`,
             gameStarts: sql<number>`COALESCE(COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END), 0)`,
-            avgPlayMs: sql<number>`COALESCE(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END), 0)`
+            avgPlayMs: sql<number>`COALESCE(CEIL(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
           })
           .from(analyticsEvents)
           .where(
@@ -210,7 +210,7 @@ export class AnalyticsService {
           title: games.title,
           slug: games.slug,
           starts: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END)`,
-          avgDuration: sql<number>`COALESCE(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END), 0)`
+          avgDuration: sql<number>`COALESCE(CEIL(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
         })
         .from(analyticsEvents)
         .leftJoin(games, eq(analyticsEvents.gameId, games.id))
@@ -312,7 +312,7 @@ export class AnalyticsService {
           visits: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'page_view' THEN 1 END)`,
           uniques: sql<number>`COUNT(DISTINCT ${analyticsEvents.visitorId})`,
           gameStarts: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END)`,
-          avgPlayMs: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`,
+          avgPlayMs: sql<number>`COALESCE(CEIL(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`,
           mobileCount: sql<number>`COUNT(DISTINCT CASE WHEN ${analyticsEvents.device} = 'mobile' THEN ${analyticsEvents.visitorId} END)`,
           desktopCount: sql<number>`COUNT(DISTINCT CASE WHEN ${analyticsEvents.device} = 'desktop' THEN ${analyticsEvents.visitorId} END)`
         })
@@ -363,7 +363,7 @@ export class AnalyticsService {
         .select({
           gameId: analyticsEvents.gameId,
           starts: sql<number>`COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END)`,
-          avgDurationMs: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
+          avgDurationMs: sql<number>`COALESCE(CEIL(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
         })
         .from(analyticsEvents)
         .where(
