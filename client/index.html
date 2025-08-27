@@ -86,5 +86,54 @@
   </script>
   
   <script type="module" src="/src/main.tsx"></script>
+  
+  <!-- GC: lightweight analytics page-view hook -->
+  <script>
+  (function () {
+    const getCookie = (n) =>
+      (document.cookie.match(new RegExp('(?:^|; )' + n.replace(/([.*+?^${}()|[\\]\\\\])/g,'\\\\$1') + '=([^;]*)')) || [])[1] || '';
+    const setCookie = (k,v,maxAge) =>
+      document.cookie = k + '=' + v + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax; Secure=' + (location.protocol === 'https:');
+    const rid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+
+    // ensure IDs
+    if (!getCookie('gc_vid')) setCookie('gc_vid', rid(), 60*60*24*365);
+    if (!getCookie('gc_sid')) setCookie('gc_sid', rid(), 60*60*30);
+
+    async function sendPV(path, ref) {
+      try {
+        await fetch('/api/analytics/page-view', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Visitor-Id': getCookie('gc_vid'),
+            'X-Session-Id': getCookie('gc_sid'),
+          },
+          credentials: 'include',
+          body: JSON.stringify({ path, referrer: ref || document.referrer || '' }),
+        });
+      } catch {}
+    }
+
+    // initial
+    sendPV(location.pathname + location.search, document.referrer);
+
+    // SPA route changes (History API hooks)
+    const _pushState = history.pushState;
+    history.pushState = function () {
+      _pushState.apply(this, arguments);
+      sendPV(location.pathname + location.search);
+    };
+    const _replaceState = history.replaceState;
+    history.replaceState = function () {
+      _replaceState.apply(this, arguments);
+      sendPV(location.pathname + location.search);
+    };
+    window.addEventListener('popstate', () => {
+      sendPV(location.pathname + location.search);
+    });
+  })();
+  </script>
 </body>
 </html>
