@@ -240,7 +240,7 @@ export default function ParentsInfoPage() {
                     <span className="material-icons text-green-400 mr-2">phone</span>
                     <h4 className="font-bold text-white text-sm">Phone</h4>
                   </div>
-                  <p className="text-gray-300 text-sm">+91 9953105778</p>
+                  <p className="text-gray-300 text-sm">+91 9266528955</p>
                   <p className="text-gray-400 text-xs mt-1">Monday to Friday, 9 AM - 6 PM IST</p>
                 </div>
               </div>

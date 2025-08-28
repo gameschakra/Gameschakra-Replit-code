@@ -30,7 +30,7 @@ export default function ContactPage() {
                   </div>
                   <h3 className="text-2xl font-bold text-white">Call Us</h3>
                 </div>
-                <p className="text-gray-300 text-lg">+91 9953105778</p>
+                <p className="text-gray-300 text-lg">+91 9266528955</p>
                 <p className="text-gray-400 text-sm mt-2">Monday to Friday, 9 AM - 6 PM IST</p>
               </div>
 

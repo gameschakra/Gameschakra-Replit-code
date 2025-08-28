@@ -168,7 +168,7 @@ export default function AboutPage() {
                   <span className="material-icons text-white">phone</span>
                 </div>
                 <h4 className="font-bold text-white mb-2">Phone</h4>
-                <p className="text-gray-300">+91 9953105778</p>
+                <p className="text-gray-300">+91 9266528955</p>
               </div>
               
               <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 text-center">

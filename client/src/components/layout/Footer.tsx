@@ -91,7 +91,7 @@ export default function Footer() {
             <div className="mt-4 text-sm text-muted-foreground space-y-1">
               <p className="flex items-center hover:text-amber-400 transition-colors duration-300">
                 <span className="material-icons text-sm mr-2">phone</span>
-                +91 9953105778
+                +91 9266528955
               </p>
               <p className="flex items-center hover:text-amber-400 transition-colors duration-300">
                 <span className="material-icons text-sm mr-2">email</span>
