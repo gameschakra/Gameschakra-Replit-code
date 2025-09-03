@@ -101,43 +101,38 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
   };
 
   return (
-    <div className="group challenge-thumbnail-fade-rtl relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-[0_10px_30px_rgba(255,184,0,.08)] transition-shadow duration-200 hover:border-amber-300 hover:-translate-y-2">
+    <div className="group relative rounded-2xl ring-1 ring-white/5 bg-slate-900/50 overflow-hidden
+                    shadow-[0_8px_32px_-12px_rgba(2,6,23,0.8)]
+                    transition-all duration-300 hover:-translate-y-0.5
+                    hover:ring-cyan-300/30 hover:shadow-[0_12px_40px_-10px_rgba(56,189,248,0.35)]">
       <a href={`/games/${game.slug}`} onClick={handleNavigate} className="block focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-lg outline-none">
-        <div className="relative pb-[75%] overflow-hidden">
+        {/* IMAGE + overlay */}
+        <div className="relative overflow-hidden aspect-[16/9]">
           {thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? (
-            <div className="absolute inset-0 w-full h-full group-hover:scale-110 transition-transform duration-700">
-              <LazyImage 
-                src={thumbnailSrc} 
-                alt={`${game.title} thumbnail`}
-                className="w-full h-full object-cover"
-                placeholderText={game.title}
-                priority={priority}
-                ratio="4/3"
-                key={`thumb-${game.id}-${Date.now()}`} /* Force re-render with unique key */
-              />
-            </div>
+            <img 
+              src={thumbnailSrc} 
+              alt={game.title}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            />
           ) : (
-            <div className="absolute inset-0 w-full h-full">
-              <LazyImage 
-                src="/assets/logo.png"
-                alt={`${game.title} thumbnail`}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                placeholderText="Game"
-                priority={priority}
-                ratio="4/3"
-              />
-            </div>
+            <img 
+              src="/assets/logo.png"
+              alt={game.title}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            />
           )}
           
-          {/* Subtle overlay for better text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+          <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none
+                          bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
           {/* Play Now Button - slides in from bottom */}
-          <div className="absolute bottom-0 left-0 right-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 px-4 text-center hover:from-amber-600 hover:to-yellow-600 transition-all duration-300 shadow-lg">
-              <span className="material-icons text-sm mr-1">play_circle</span>
-              Play Now
-            </div>
+          <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+            <button className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold
+                               bg-gradient-to-r from-amber-400 via-orange-400 to-pink-500 text-slate-900
+                               shadow-[0_8px_24px_-6px_rgba(251,191,36,0.45)]
+                               hover:shadow-[0_10px_32px_-6px_rgba(251,191,36,0.6)] transition-all w-full justify-center">
+              ▶︎ Play Now
+            </button>
           </div>
 
           {/* New or trending tag */}
@@ -148,30 +143,19 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
           )}
         </div>
         
-        <div className="px-3 pt-3 pb-4">
-          <div className="flex items-start">
-            <h3 className="font-medium text-gray-900 text-base leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-              {game.title}
-            </h3>
-          </div>
-          
-          <div className="flex items-center justify-between mt-2">
-            {game.categoryId && (
-              <span className="text-xs text-gray-500 font-medium">
-                {game.category?.name || "Game"}
-              </span>
-            )}
-            <div className="flex items-center">
-              <div className="flex group-hover:scale-110 transition-transform duration-300">
-                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
-                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
-                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
-                <span className="material-icons text-yellow-400 text-sm hover:text-yellow-300 transition-colors duration-200 hover:drop-shadow-lg">star</span>
-                <span className="material-icons text-gray-300 text-sm hover:text-yellow-300 transition-colors duration-200">star</span>
-              </div>
-              <span className="text-xs font-medium text-gray-500 ml-1 group-hover:text-amber-600 transition-colors duration-300">
-                4.0
-              </span>
+        {/* CONTENT (no overlap ever) */}
+        <div className="px-3 pt-2 pb-3">
+          <h3 className="text-white/90 font-semibold text-[15px] leading-tight line-clamp-1">
+            {game.title}
+          </h3>
+
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[12px] text-slate-300/90">
+              {game.category?.name || "Game"}
+            </span>
+            <div className="flex items-center gap-1 text-amber-400">
+              <span className="material-icons text-sm">star</span>
+              <span className="text-xs text-slate-300/90">4.0</span>
             </div>
           </div>
         </div>

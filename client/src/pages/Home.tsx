@@ -11,12 +11,21 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import FeaturedGameCarousel from "@/components/games/FeaturedGameCarousel";
 import GameCard from "@/components/games/GameCard";
+import GameCardMobile from "@/components/games/GameCardMobile";
+import FeaturedCardMobile from "@/components/games/FeaturedCardMobile";
 import ActiveChallengeCard from "@/components/challenges/ActiveChallengeCard";
 import UpcomingChallengeCard from "@/components/challenges/UpcomingChallengeCard";
 import AdSense from "@/components/ads/AdSense";
 import TestAdButton from "@/components/ads/TestAdButton";
 import { toItemsArray } from "@/lib/normalize";
 import CategoryLink from "@/components/categories/CategoryLink";
+import CategoryChips from "@/components/categories/CategoryChips";
+import SearchPillMobile from "@/components/search/SearchPillMobile";
+import MobileCarousel from "@/components/ui/MobileCarousel";
+import Panel from "@/components/ui/Panel";
+import HorizontalCards from "@/components/ui/HorizontalCards";
+import { ColorIcon } from "@/components/ui/ColorIcon";
+import { Home as HomeIcon, Sparkles, TrendingUp, Star, Award, Users, Trophy, Calendar, Heart, History, Medal } from "lucide-react";
 // GC_SEO: Import new centralized SEO utilities
 import { 
   applyMeta, 
@@ -311,8 +320,12 @@ export default function Home() {
   };
 
   return (
-    <section className="py-0 bg-background">
-      <div className="container mx-auto px-4 sm:px-6">
+    <>
+      
+      <main className="min-h-dvh bg-[var(--gc-bg-1)] [background:var(--gc-grad-hero)] md:min-h-screen md:gc-bg">
+        {/* Desktop Container */}
+        <div className="hidden md:block container mx-auto px-4 sm:px-6 py-0">
+          {/* Desktop content - keep existing */}
         {/* Featured carousel only on homepage */}
         {activeSection === "all" && (
           <>
@@ -338,8 +351,10 @@ export default function Home() {
                     {activeChallenges && activeChallenges.length > 0 && (
                       <>
                         <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-2xl font-title font-bold text-white flex items-center">
-                            <span className="material-icons text-amber-500 mr-2">emoji_events</span>
+                          <h2 className="flex items-center gap-2 text-white/90 font-semibold text-[22px] tracking-tight">
+                            <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-amber-500/90 text-white shadow-md">
+                              <span className="material-icons text-[16px]">emoji_events</span>
+                            </span>
                             Active Challenges
                           </h2>
                           <Link
@@ -392,8 +407,10 @@ export default function Home() {
                     {upcomingChallenges && upcomingChallenges.length > 0 && (
                       <>
                         <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-2xl font-title font-bold text-white flex items-center">
-                            <span className="material-icons text-blue-500 mr-2">schedule</span>
+                          <h2 className="flex items-center gap-2 text-white/90 font-semibold text-[22px] tracking-tight">
+                            <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-blue-500/90 text-white shadow-md">
+                              <span className="material-icons text-[16px]">schedule</span>
+                            </span>
                             Upcoming Challenges
                           </h2>
                           <Link
@@ -461,7 +478,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none ${activeSection === 'all' ? 'bg-amber-500/20 text-amber-400 font-medium shadow-lg shadow-amber-500/10' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500 hover:shadow-md hover:shadow-amber-500/5'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('all'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm transition-all duration-300 group-hover:scale-110 group-hover:text-amber-400">home</span>
+                    <ColorIcon icon={HomeIcon} gradient="amber" size="sm" active={activeSection === 'all'} className="mr-3" />
                     Home
                   </Link>
                   <Link 
@@ -469,7 +486,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'new' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('new'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">new_releases</span>
+                    <ColorIcon icon={Sparkles} gradient="violet" size="sm" active={activeSection === 'new'} className="mr-3" />
                     New Games
                   </Link>
                   <Link 
@@ -477,7 +494,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'trending' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('trending'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">trending_up</span>
+                    <ColorIcon icon={TrendingUp} gradient="rose" size="sm" active={activeSection === 'trending'} className="mr-3" />
                     Trending Now
                   </Link>
                   <Link 
@@ -485,7 +502,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'popular' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('popular'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">star</span>
+                    <ColorIcon icon={Star} gradient="sky" size="sm" active={activeSection === 'popular'} className="mr-3" />
                     Popular
                   </Link>
                   <Link 
@@ -493,7 +510,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'featured' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('featured'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">verified</span>
+                    <ColorIcon icon={Award} gradient="fuchsia" size="sm" active={activeSection === 'featured'} className="mr-3" />
                     Featured
                   </Link>
                   <Link 
@@ -501,7 +518,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'multiplayer' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('multiplayer'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">group</span>
+                    <ColorIcon icon={Users} gradient="emerald" size="sm" active={activeSection === 'multiplayer'} className="mr-3" />
                     Multiplayer
                   </Link>
                 </nav>
@@ -516,7 +533,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'active-challenges' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('active-challenges'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">emoji_events</span>
+                    <ColorIcon icon={Trophy} gradient="orange" size="sm" active={activeSection === 'active-challenges'} className="mr-3" />
                     Active Challenges
                   </Link>
                   <Link 
@@ -524,7 +541,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'upcoming-challenges' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('upcoming-challenges'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">schedule</span>
+                    <ColorIcon icon={Calendar} gradient="cyan" size="sm" active={activeSection === 'upcoming-challenges'} className="mr-3" />
                     Upcoming Challenges
                   </Link>
                   <Link 
@@ -532,7 +549,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'completed-challenges' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('completed-challenges'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">military_tech</span>
+                    <ColorIcon icon={Medal} gradient="violet" size="sm" active={activeSection === 'completed-challenges'} className="mr-3" />
                     Completed Challenges
                   </Link>
                 </nav>
@@ -547,7 +564,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'favorites' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('favorites'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">favorite</span>
+                    <ColorIcon icon={Heart} gradient="rose" size="sm" active={activeSection === 'favorites'} className="mr-3" />
                     Favorites
                   </Link>
                   <Link 
@@ -555,7 +572,7 @@ export default function Home() {
                     className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'recent' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
                     onClick={(e) => {e.preventDefault(); setActiveSection('recent'); setSelectedCategory(null)}}
                   >
-                    <span className="material-icons mr-3 text-sm">history</span>
+                    <ColorIcon icon={History} gradient="emerald" size="sm" active={activeSection === 'recent'} className="mr-3" />
                     Recently Played
                   </Link>
                 </nav>
@@ -628,7 +645,7 @@ export default function Home() {
             {/* Section Header */}
             <div className="flex flex-wrap items-center justify-between mb-5">
               <div>
-                <h1 className="text-2xl font-title font-bold text-amber-500 mb-1">{getSectionTitle()}</h1>
+                <h1 className="text-[22px] font-semibold text-white/90 tracking-tight mb-1">{getSectionTitle()}</h1>
                 {activeSection === 'categories' && (
                   <p className="text-sm text-gray-400">Filter by Category</p>
                 )}
@@ -780,7 +797,131 @@ export default function Home() {
             )}
           </div>
         </div>
-      </div>
-    </section>
+        </div>
+        
+        {/* Mobile Layout */}
+        <div className="md:hidden">
+          {/* Featured Carousel - Mobile */}
+          {activeSection === "all" && featuredGames && (
+            <section className="px-3 pt-3">
+              <h2 className="text-[18px] font-semibold text-[var(--gc-text-1)] mb-3">Featured Games</h2>
+              <MobileCarousel showSwipeHint>
+                {toItemsArray<Game>(featuredGames).slice(0, 5).map((game) => (
+                  <FeaturedCardMobile
+                    key={game.id}
+                    id={game.id}
+                    title={game.title}
+                    slug={game.slug}
+                    imageUrl={game.thumbnailUrl || '/assets/logo.png'}
+                    badge={game.isFeatured ? "New" : undefined}
+                  />
+                ))}
+              </MobileCarousel>
+            </section>
+          )}
+
+          {/* Challenge Sections - Mobile */}
+          {activeSection === "all" && (
+            <section className="px-3 mt-3 space-y-3">
+              {activeChallenges && activeChallenges.length > 0 && (
+                <Panel 
+                  title="Active Challenges" 
+                  icon={Trophy} 
+                  tone="challenges"
+                  viewAllHref="/?section=active-challenges"
+                  onViewAll={() => setActiveSection('active-challenges')}
+                >
+                  <HorizontalCards>
+                    {activeChallenges
+                      .filter(challenge => challenge.status === "active")
+                      .map((challenge) => (
+                        <div key={challenge.id} className="w-[76vw] shrink-0 snap-start">
+                          <ActiveChallengeCard 
+                            challenge={challenge as any} 
+                            calculateProgress={calculateProgress}
+                            calculateCountdown={calculateCountdown}
+                          />
+                        </div>
+                      ))}
+                  </HorizontalCards>
+                </Panel>
+              )}
+              
+              {upcomingChallenges && upcomingChallenges.length > 0 && (
+                <Panel 
+                  title="Upcoming Challenges" 
+                  icon={Calendar} 
+                  tone="upcoming"
+                  viewAllHref="/?section=upcoming-challenges"
+                  onViewAll={() => setActiveSection('upcoming-challenges')}
+                >
+                  <HorizontalCards>
+                    {upcomingChallenges
+                      .filter(challenge => challenge.status === "upcoming")
+                      .map((challenge) => (
+                        <div key={challenge.id} className="w-[76vw] shrink-0 snap-start">
+                          <UpcomingChallengeCard 
+                            challenge={challenge as any} 
+                            calculateCountdown={calculateCountdown}
+                          />
+                        </div>
+                      ))}
+                  </HorizontalCards>
+                </Panel>
+              )}
+            </section>
+          )}
+
+          {/* Search + Categories - Mobile */}
+          <div className="px-3 mt-3 space-y-2">
+            <SearchPillMobile />
+            <CategoryChips 
+              categories={categories || []}
+              selectedCategory={selectedCategory}
+              onCategorySelect={setSelectedCategory}
+            />
+          </div>
+
+          {/* Games Grid - Mobile */}
+          <section className="px-3 mt-2 pb-6">
+            
+            {isCurrentSectionLoading() ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-[var(--gc-card)] rounded-2xl overflow-hidden">
+                    <Skeleton className="w-full aspect-[4/3]" />
+                    <div className="p-3">
+                      <Skeleton className="h-4 w-3/4 mb-2" />
+                      <Skeleton className="h-3 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : getCurrentGames().length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-slate-400 mb-2">No games found</div>
+                <Button 
+                  onClick={() => {setActiveSection('all'); setSelectedCategory(null);}}
+                  className="bg-[var(--gc-accent)] hover:bg-[var(--gc-accent)]/90 text-black"
+                >
+                  Browse All Games
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {getCurrentGames().map((game: Game, index: number) => (
+                  <GameCardMobile 
+                    key={game.id} 
+                    game={game} 
+                    priority={index < 4} 
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+    </>
   );
 }

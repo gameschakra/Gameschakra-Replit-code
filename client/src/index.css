@@ -79,6 +79,22 @@
     --font-sans: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-title: 'Nunito', 'Poppins', system-ui;
     
+    /* Mobile Gaming Design Tokens */
+    --gc-bg-1: #0b1220;         /* base slate-blue */
+    --gc-bg-2: #0f1628;         /* section panels */
+    --gc-card: #101a2f;         /* cards */
+    --gc-elev-1: 0 6px 24px rgba(0,0,0,.35);
+    --gc-border: rgba(255,255,255,.06);
+    --gc-text-1: #f8fafc;       /* heading */
+    --gc-text-2: #cbd5e1;       /* body */
+    --gc-mute: #94a3b8;         /* meta */
+    --gc-accent: #22d3ee;       /* cyan neon */
+    --gc-warn: #fbbf24;         /* amber */
+    --gc-good: #34d399;         /* green */
+    --gc-bad: #fb7185;          /* rose */
+    --gc-grad-hero: radial-gradient(120% 80% at 80% -10%, rgba(34,211,238,.18), transparent 60%),
+                    radial-gradient(100% 60% at -10% 0%, rgba(251,191,36,.14), transparent 50%);
+    
     /* Light theme */
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -181,6 +197,36 @@
     box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
     transition: all 0.3s ease-out;
   }
+}
+
+/* ==== GC glossy background (CrazyGames vibe) ==== */
+.gc-bg {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(14,165,233,.18) 0%, transparent 60%),
+    radial-gradient(900px 520px at 100% 0, rgba(168,85,247,.18) 0%, transparent 55%),
+    radial-gradient(600px 420px at 0 80%, rgba(34,197,94,.10) 0%, transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #0a0f1a 60%, #0b0f19 100%);
+  background-attachment: fixed;
+}
+
+/* Optional: a subtle vignette */
+html:before {
+  content: '';
+  position: fixed; 
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 60% at 50% 20%, transparent 0%, rgba(0,0,0,.25) 90%);
+  z-index: -1;
+}
+
+/* Typography & colors for game text */
+.gc-title { color: rgba(255,255,255,0.92); }
+.gc-meta  { color: rgba(203,213,225,0.85); } /* slate-300 */
+.gc-muted { color: rgba(148,163,184,0.8); }  /* slate-400 */
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
 /* ===== GC_FIX: Element-based fullscreen with dvh + overlay fallback ===== */
@@ -345,5 +391,169 @@ header, .site-header, .site-footer {
     background: rgba(0, 0, 0, 0.95);
     border-color: rgba(255, 255, 255, 0.8);
   }
+}
+
+/* ===== Mobile Gaming Enhancements ===== */
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced touch targets for mobile */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements meet minimum tap target size */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
   
+  /* Smooth momentum scrolling */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+  
+  /* Pull to refresh support (for PWA) */
+  .ptr-element {
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+  
+  /* Enhanced carousel performance */
+  .mobile-carousel {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+  
+  /* Improved text legibility on mobile */
+  .mobile-text-optimize {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Prevent zoom on form focus (iOS Safari) */
+  input[type="search"],
+  input[type="text"],
+  input[type="email"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Enhanced focus states for touch */
+  .touch-focus:focus-visible {
+    outline: 3px solid var(--gc-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Micro-interactions and delightful animations */
+@keyframes slideInFromBottom {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.slide-in-up {
+  animation: slideInFromBottom 0.3s ease-out;
+}
+
+.fade-in-scale {
+  animation: fadeInScale 0.2s ease-out;
+}
+
+.shimmer {
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: shimmer;
+  animation-timing-function: linear;
+  background: linear-gradient(to right, #eff6ff 8%, #f1f5f9 18%, #eff6ff 33%);
+  background-size: 800px 104px;
+  position: relative;
+}
+
+/* Gaming-specific visual enhancements */
+.neon-glow {
+  box-shadow: 0 0 5px var(--gc-accent), 0 0 10px var(--gc-accent), 0 0 15px var(--gc-accent);
+}
+
+.glass-effect {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Safe area handling for modern mobile devices */
+@supports (padding: max(0px)) {
+  .safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-left {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  
+  .safe-right {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Mobile Header Safety Guard - Prevent duplicate headers */
+@media (max-width: 768px) {
+  /* Hide any duplicate/sub-header components on mobile */
+  .mobile-subheader,
+  .secondary-header,
+  .sticky-search-bar,
+  header.header--secondary,
+  .mobile-topbar,
+  .page-header--mobile {
+    display: none !important;
+  }
+  
+  /* Ensure only one header is visible */
+  header:not(:first-of-type) {
+    display: none !important;
+  }
 }

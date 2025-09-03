@@ -79,9 +79,9 @@ export default function FeaturedGameCarousel() {
 
   if (isLoading) {
     return (
-      <section className="relative bg-gradient-to-r from-gray-900 to-black py-12 overflow-hidden">
+      <section className="hidden md:block relative bg-gradient-to-r from-gray-900 to-black py-12 overflow-hidden">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-title font-bold text-white mb-8">Featured Games</h2>
+          <h2 className="hidden md:block text-3xl font-title font-bold text-white mb-8">Featured Games</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="bg-gray-800/50 rounded-lg overflow-hidden shadow-lg backdrop-blur-sm border border-gray-700">
@@ -104,10 +104,10 @@ export default function FeaturedGameCarousel() {
   }
 
   return (
-    <section className="relative bg-gradient-to-r from-gray-900 to-black py-8 mb-4 overflow-hidden">
+    <section className="hidden md:block relative bg-gradient-to-r from-gray-900 to-black py-8 mb-4 overflow-hidden">
       <div className="absolute inset-0 bg-[url('/assets/hero-pattern.png')] opacity-5"></div>
       <div className="container mx-auto px-4 relative z-10">
-        <div className="flex justify-between items-center mb-6">
+        <div className="hidden md:flex justify-between items-center mb-6">
           <h2 className="text-3xl font-title font-bold text-white">Featured Games</h2>
           <button
             onClick={() => {
@@ -220,14 +220,14 @@ export default function FeaturedGameCarousel() {
           
           {/* Dots - Show dots only if we have multiple slides */}
           {totalSlides > 1 && (
-            <div className="flex justify-center mt-4 space-x-2">
+            <div className="flex justify-center mt-3 space-x-1">
               {[...Array(totalSlides)].map((_, index) => (
                 <button 
                   key={index}
-                  className={`w-3 h-3 md:w-2 md:h-2 rounded-full transition-all duration-300 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none ${
+                  className={`w-1 h-1 rounded-full transition-all duration-300 focus-visible:ring-1 ring-white/40 ring-offset-1 ring-offset-black outline-none ${
                     index === currentSlide 
-                      ? 'bg-amber-500 opacity-80 scale-125 shadow-lg shadow-amber-500/50' 
-                      : 'bg-gray-400 opacity-40 hover:bg-gray-300 hover:opacity-60 hover:scale-110'
+                      ? 'bg-amber-500 scale-105' 
+                      : 'bg-white/20 hover:bg-white/30'
                   }`}
                   onClick={() => {
                     if (!isTransitioning) {

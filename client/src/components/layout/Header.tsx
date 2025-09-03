@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Home, Gamepad2, Trophy, TrendingUp, FileText, Code } from "lucide-react";
+import { SidebarItem } from "@/components/navigation/SidebarItem";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -177,56 +179,45 @@ export default function Header() {
           
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="px-4 space-y-2">
-              <Link
-                href="/"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">home</span>
-                  <span>Home</span>
-                </div>
+              <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem 
+                  icon={Home} 
+                  label="Home" 
+                  isActive={location === "/"}
+                  color="amber"
+                />
               </Link>
-              <Link
-                href="/?section=all"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">sports_esports</span>
-                  <span>All Games</span>
-                </div>
+              <Link href="/?section=all" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem 
+                  icon={Gamepad2} 
+                  label="All Games" 
+                  isActive={location.includes("section=all")}
+                  color="violet"
+                />
               </Link>
-              <Link
-                href="/?section=active-challenges"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">emoji_events</span>
-                  <span>Challenges</span>
-                </div>
+              <Link href="/?section=active-challenges" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem 
+                  icon={Trophy} 
+                  label="Challenges" 
+                  isActive={location.includes("section=active-challenges")}
+                  color="rose"
+                />
               </Link>
-              <Link
-                href="/?section=popular"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">trending_up</span>
-                  <span>Popular</span>
-                </div>
+              <Link href="/?section=popular" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem 
+                  icon={TrendingUp} 
+                  label="Popular" 
+                  isActive={location.includes("section=popular")}
+                  color="sky"
+                />
               </Link>
-
-              <Link
-                href="/blog"
-                className="block py-2 px-3 text-white hover:text-amber-500 transition-colors rounded-md hover:bg-gray-800"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <span className="material-icons mr-3">article</span>
-                  <span>Blog</span>
-                </div>
+              <Link href="/blog" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem 
+                  icon={FileText} 
+                  label="Blog" 
+                  isActive={location === "/blog"}
+                  color="fuchsia"
+                />
               </Link>
               
               {/* GC_FIX: Use dynamic categories from /api/categories */}
@@ -235,15 +226,13 @@ export default function Header() {
           </div>
           
           <div className="p-4 border-t border-gray-800">
-            <Link
-              href="/developers"
-              className="block py-2 px-3 text-white bg-purple-600 hover:bg-purple-700 transition-colors rounded-md"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <div className="flex items-center">
-                <span className="material-icons mr-3">code</span>
-                <span>Dev Portal</span>
-              </div>
+            <Link href="/developers" onClick={() => setMobileMenuOpen(false)}>
+              <SidebarItem 
+                icon={Code} 
+                label="Dev Portal" 
+                isActive={location === "/developers"}
+                color="emerald"
+              />
             </Link>
 
             <Link
