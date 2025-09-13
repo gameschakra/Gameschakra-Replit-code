@@ -150,14 +150,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     next();
   });
 
-  // Configure session - dev-safe, prod-safe
+  // Configure session with proper production/development settings
   const isProd = process.env.NODE_ENV === 'production';
+  const trustProxy = process.env.TRUST_PROXY === 'true';
+  const secureCookies = process.env.SECURE_COOKIES === 'true' || isProd;
+  const sameSiteCookies = process.env.SAME_SITE_COOKIES || (isProd ? 'none' : 'lax');
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || '.gameschakra.com') : undefined;
   
-  console.log(`Setting up session for environment: ${isProd ? 'Production' : 'Development'}`);
-  console.log(`Session config: secure=${isProd}, sameSite=${isProd ? 'none' : 'lax'}, domain=${isProd ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : 'undefined'}`);
-  
-  // Set trust proxy for session handling
-  app.set('trust proxy', 1);
+  console.log(`🍪 Session config: secure=${secureCookies}, sameSite=${sameSiteCookies}, domain=${cookieDomain || 'default'}, trustProxy=${trustProxy}`);
   
   const sessionMiddleware = session({
     name: 'gc_sid',
@@ -165,14 +165,15 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: false,  // Allow JS access in development for debugging
-      secure: false,    // Always false for localhost testing
-      sameSite: 'lax',  // Use lax for localhost
-      path: '/',        // Explicit path
-      maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days in development
+      httpOnly: true,   // Always httpOnly for security
+      secure: secureCookies,
+      sameSite: sameSiteCookies as 'strict' | 'lax' | 'none',
+      domain: cookieDomain,
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days
     },
     rolling: true,
-    proxy: false,  // Disable proxy for localhost
+    proxy: trustProxy,
     genid: () => crypto.randomUUID()
   });
   

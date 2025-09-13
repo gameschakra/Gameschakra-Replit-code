@@ -22,7 +22,6 @@ if (process.env.NODE_ENV === 'production' && process.env.SESSION_SECRET === 'you
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from 'cookie-parser';
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { scheduleSitemapGeneration } from "./utils/sitemapGenerator";
 import * as cron from 'node-cron';
 import { AnalyticsService } from './services/analyticsService';
@@ -31,8 +30,11 @@ import * as fileService from "./services/fileService";
 
 const app = express();
 
-// Trust proxy configuration - always trust first proxy for Nginx/AWS
-app.set('trust proxy', 1);
+// Trust proxy configuration - configurable based on environment
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+  console.log('🔧 Trust proxy enabled');
+}
 
 // Configure middleware with production-optimized limits
 const bodyLimit = process.env.BODY_PARSER_LIMIT || '50mb';
@@ -177,13 +179,22 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
+  // Setup static serving or dev middleware based on environment
+  if (process.env.NODE_ENV === "development") {
+    // Only import vite in development
+    try {
+      const { setupVite } = await import("./vite");
+      await setupVite(app, server);
+      console.log('🔧 Vite development middleware enabled');
+    } catch (error) {
+      console.error('❌ Failed to setup Vite dev middleware:', error);
+      process.exit(1);
+    }
   } else {
+    // Production static file serving
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
+    console.log('📦 Production static file serving enabled');
   }
 
   // Serve the app on the configured port and host
@@ -191,9 +202,13 @@ app.use((req, res, next) => {
   const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
   
   server.listen(port, host, () => {
-    log(`🚀 GameHub Pro serving on ${host}:${port}`);
-    log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    console.log(`🚀 GameHub Pro serving on ${host}:${port}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    console.log(`🔐 Trust Proxy: ${process.env.TRUST_PROXY === 'true' ? 'Enabled' : 'Disabled'}`);
+    console.log(`🍪 Cookie Domain: ${process.env.COOKIE_DOMAIN || 'default'}`);
+    console.log(`🌐 CORS Origins: ${process.env.CORS_ORIGIN || 'development defaults'}`);
+    console.log(`🔑 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
     
     // Generate sitemap on server start and schedule regeneration
     const sitemapInterval = scheduleSitemapGeneration();

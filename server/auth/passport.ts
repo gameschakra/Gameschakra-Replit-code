@@ -69,14 +69,19 @@ passport.use(new LocalStrategy(
   }
 ));
 
-// Google OAuth Strategy
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  passport.use(new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || (process.env.NODE_ENV === 'production' ? 'https://gameschakra.com/api/auth/google/callback' : 'http://localhost:3000/api/auth/google/callback')
-    },
+// Google OAuth Strategy - register strategy with proper error handling
+try {
+  if (process.env.GOOGLE_CLIENT_ID && 
+      process.env.GOOGLE_CLIENT_SECRET && 
+      process.env.GOOGLE_CLIENT_ID !== 'temp-disabled' && 
+      !process.env.GOOGLE_CLIENT_ID.includes('your-google')) {
+    
+    passport.use(new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || (process.env.NODE_ENV === 'production' ? 'https://gameschakra.com/api/auth/google/callback' : 'http://localhost:3000/api/auth/google/callback')
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         // Check if account already exists
@@ -149,10 +154,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
         return done(null, existingUser);
       } catch (error) {
+        console.error('Google OAuth strategy error:', error);
         return done(error, null);
       }
     }
-  ));
+    ));
+    
+    console.log('✅ Google OAuth strategy registered successfully');
+  } else {
+    console.warn('⚠️  Google OAuth not configured - missing or invalid GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET');
+  }
+} catch (error) {
+  console.error('❌ Failed to register Google OAuth strategy:', error);
 }
 
 // Apple OAuth Strategy

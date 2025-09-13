@@ -34,7 +34,12 @@ export function SocialButtons({ variant = 'login', disabled = false }: SocialBut
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('authReturnUrl', window.location.pathname);
     }
-    window.location.href = '/api/auth/google';
+    
+    // Use proper API base URL for Google auth
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 
+      (import.meta.env.PROD ? 'https://gameschakra.com/api' : '/api');
+    
+    window.location.href = `${apiBaseUrl}/auth/google`;
   };
 
 
