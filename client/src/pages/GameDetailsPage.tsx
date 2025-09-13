@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
 import GameCard from "@/components/games/GameCard";
+import { useRecentlyPlayed } from "@/hooks/useRecentlyPlayed";
 // GC_UX: Enhanced fullscreen overlay with UX improvements
 import FullscreenGameOverlay from "@/components/games/FullscreenGameOverlay";
 // GC_SEO: Import new centralized SEO utilities
@@ -32,6 +33,7 @@ export default function GameDetailsPage() {
   const [overlayFs, setOverlayFs] = useState(false);
   const gameFrameRef = useRef<HTMLIFrameElement>(null);
   const isMobile = window.innerWidth <= 768;
+  const { addRecentGame } = useRecentlyPlayed();
   
   // Mobile detection hook
   const [isSmall, setIsSmall] = useState<boolean>(() => 
@@ -143,6 +145,16 @@ export default function GameDetailsPage() {
     // Record play count
     try {
       await apiRequest("POST", `/api/games/${game.id}/play`, {});
+      
+      // Add to recently played (works for both logged in and non-logged users)
+      addRecentGame({
+        gameId: game.id,
+        gameSlug: game.slug,
+        gameTitle: game.title,
+        gameThumbnail: game.thumbnailUrl || '',
+        categoryName: game.category?.name,
+      });
+      
       setShowPlayButton(false);
       
       // If on mobile, automatically go to overlay fullscreen after a short delay

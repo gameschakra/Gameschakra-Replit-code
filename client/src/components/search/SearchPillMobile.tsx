@@ -20,7 +20,7 @@ export default function SearchPillMobile({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      setLocation(`/?section=search&search=${encodeURIComponent(query.trim())}`);
+      setLocation(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 

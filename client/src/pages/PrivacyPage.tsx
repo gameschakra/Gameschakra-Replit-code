@@ -52,9 +52,37 @@ export default function PrivacyPage() {
                   <span className="material-icons text-amber-400 mr-3">storage</span>
                   <h2 className="text-2xl font-bold text-white m-0">Information we collect</h2>
                 </div>
-                <p className="text-gray-300 leading-relaxed mb-4">The personal information that you are asked to provide, and the reasons why you are asked to provide it, will be made clear to you at the point we ask you to provide your personal information.</p>
-                <p className="text-gray-300 leading-relaxed mb-4">If you contact us directly, we may receive additional information about you such as your name, email address, phone number, the contents of the message and/or attachments you may send us, and any other information you may choose to provide.</p>
-                <p className="text-gray-300 leading-relaxed mb-0">When you register for an Account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number.</p>
+                <p className="text-gray-300 leading-relaxed mb-4">We collect information you provide directly to us and automatically when you use our service:</p>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Account Information</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Registration Data:</strong> Name, email address, username, phone number, city, country</li>
+                  <li><strong>Profile Information:</strong> Avatar/profile picture, gaming preferences, account settings</li>
+                  <li><strong>Authentication Data:</strong> Password (encrypted) or third-party authentication tokens</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Google OAuth Information</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Google Profile Data:</strong> When you sign in with Google, we receive your name, email address, and profile picture</li>
+                  <li><strong>OAuth Tokens:</strong> We store authentication tokens to maintain your login session</li>
+                  <li><strong>Google ID:</strong> Your unique Google account identifier for account linking</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Gaming Activity Data</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Game Play History:</strong> Games played, play duration, scores, and achievements</li>
+                  <li><strong>Favorites:</strong> Games you've marked as favorites</li>
+                  <li><strong>Recently Played:</strong> Your recent gaming activity</li>
+                  <li><strong>User Preferences:</strong> Game categories, difficulty settings, display preferences</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Technical Information</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-0">
+                  <li><strong>Device Information:</strong> Browser type, operating system, screen resolution</li>
+                  <li><strong>Usage Data:</strong> Pages visited, time spent, click patterns, search queries</li>
+                  <li><strong>IP Address:</strong> For security and analytics purposes</li>
+                  <li><strong>Cookies:</strong> Session cookies, preference cookies, and analytics cookies</li>
+                </ul>
               </div>
               
               {/* How We Use Information Section */}
@@ -64,14 +92,43 @@ export default function PrivacyPage() {
                   <h2 className="text-2xl font-bold text-white m-0">How we use your information</h2>
                 </div>
                 <p className="text-gray-300 leading-relaxed mb-4">We use the information we collect in various ways, including to:</p>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Core Platform Services</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Account Management:</strong> Create, maintain, and manage your user account and profile</li>
+                  <li><strong>Authentication:</strong> Verify your identity and provide secure access to our platform</li>
+                  <li><strong>Game Services:</strong> Deliver game content, track your progress, save your achievements and favorites</li>
+                  <li><strong>Personalization:</strong> Customize game recommendations and content based on your preferences</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Google OAuth Data Usage</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Account Creation:</strong> Use your Google profile information to create your GamesChakra account</li>
+                  <li><strong>Profile Setup:</strong> Populate your profile with your Google name, email, and profile picture</li>
+                  <li><strong>Single Sign-On:</strong> Enable seamless login without requiring separate passwords</li>
+                  <li><strong>Account Linking:</strong> Connect your Google account with your gaming profile and activity</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Communication & Support</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Customer Service:</strong> Respond to your inquiries, provide technical support, and resolve issues</li>
+                  <li><strong>Platform Updates:</strong> Send important notifications about service changes, new features, or security updates</li>
+                  <li><strong>Optional Marketing:</strong> With your consent, share news about new games and platform features</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Analytics & Improvement</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Usage Analytics:</strong> Understand how users interact with our platform to improve user experience</li>
+                  <li><strong>Performance Monitoring:</strong> Track technical performance and identify areas for optimization</li>
+                  <li><strong>Feature Development:</strong> Analyze user behavior to develop new games, features, and functionality</li>
+                  <li><strong>Security:</strong> Monitor for suspicious activity, prevent fraud, and protect user accounts</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Legal & Compliance</h3>
                 <ul className="list-disc pl-6 space-y-2 text-gray-300">
-                  <li>Provide, operate, and maintain our website</li>
-                  <li>Improve, personalize, and expand our website</li>
-                  <li>Understand and analyze how you use our website</li>
-                  <li>Develop new products, services, features, and functionality</li>
-                  <li>Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes</li>
-                  <li>Send you emails</li>
-                  <li>Find and prevent fraud</li>
+                  <li><strong>Legal Obligations:</strong> Comply with applicable laws, regulations, and legal processes</li>
+                  <li><strong>Terms Enforcement:</strong> Ensure compliance with our Terms of Service and community guidelines</li>
+                  <li><strong>Data Protection:</strong> Maintain security and integrity of user data and our platform</li>
                 </ul>
               </div>
               
@@ -93,13 +150,56 @@ export default function PrivacyPage() {
                 <p className="text-gray-300 leading-relaxed mb-0">Like any other website, GamesChakra uses 'cookies'. These cookies are used to store information including visitors' preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users' experience by customizing our web page content based on visitors' browser type and/or other information.</p>
               </div>
               
+              {/* Data Retention Section */}
+              <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
+                <div className="flex items-center mb-4">
+                  <span className="material-icons text-green-400 mr-3">schedule</span>
+                  <h2 className="text-2xl font-bold text-white m-0">Data Retention</h2>
+                </div>
+                <p className="text-gray-300 leading-relaxed mb-4">We retain your personal information only as long as necessary to provide our services and fulfill the purposes outlined in this privacy policy:</p>
+                
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Account Data:</strong> We retain your account information while your account is active and for up to 3 years after account deletion</li>
+                  <li><strong>Google OAuth Data:</strong> Authentication tokens are refreshed regularly and expired tokens are automatically deleted</li>
+                  <li><strong>Gaming Activity:</strong> Game play history, scores, and achievements are retained while your account is active</li>
+                  <li><strong>Technical Logs:</strong> Server logs and analytics data are retained for up to 12 months for security and performance monitoring</li>
+                  <li><strong>Marketing Communications:</strong> Email marketing data is retained until you unsubscribe or request deletion</li>
+                </ul>
+                
+                <p className="text-gray-300 leading-relaxed mb-0">You can request deletion of your personal data at any time by contacting us. Some information may be retained longer if required by law or for legitimate business purposes such as fraud prevention.</p>
+              </div>
+              
+              {/* Third-Party Services Section */}
+              <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
+                <div className="flex items-center mb-4">
+                  <span className="material-icons text-blue-400 mr-3">integration_instructions</span>
+                  <h2 className="text-2xl font-bold text-white m-0">Third-Party Services</h2>
+                </div>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Google Services</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Google OAuth:</strong> When you sign in with Google, we use Google's authentication service. Google may collect information about your use of our service. See <a href="https://policies.google.com/privacy" className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a></li>
+                  <li><strong>Google AdSense:</strong> We use Google AdSense to display advertisements. Google may use cookies and personal data to provide relevant ads. You can control ad personalization in your <a href="https://adssettings.google.com/" className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">Google Ad Settings</a></li>
+                  <li><strong>Google Analytics:</strong> We use Google Analytics to understand how users interact with our website. This service collects anonymous usage data</li>
+                </ul>
+
+                <h3 className="text-lg font-bold text-white mb-3">Data Sharing</h3>
+                <p className="text-gray-300 leading-relaxed mb-0">We do not sell, trade, or rent your personal data to third parties. We may share data with service providers (like Google) only to provide our services and only as described in their privacy policies. All third-party services we use are GDPR and CCPA compliant.</p>
+              </div>
+
               {/* Google DoubleClick DART Cookie Section */}
               <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
                 <div className="flex items-center mb-4">
                   <span className="material-icons text-red-400 mr-3">ads_click</span>
-                  <h2 className="text-2xl font-bold text-white m-0">Google DoubleClick DART Cookie</h2>
+                  <h2 className="text-2xl font-bold text-white m-0">Advertising & Cookies</h2>
                 </div>
-                <p className="text-gray-300 leading-relaxed mb-0">Google is one of a third-party vendor on our site. It also uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.gameschakra.com and other sites on the internet. However, visitors may choose to decline the use of DART cookies by visiting the Google ad and content network Privacy Policy at the following URL – <a href="https://policies.google.com/technologies/ads" className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">https://policies.google.com/technologies/ads</a></p>
+                <p className="text-gray-300 leading-relaxed mb-4">We use Google AdSense and other advertising partners to display ads on our website. These services may use cookies and tracking technologies:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>DART Cookies:</strong> Google uses DART cookies to serve ads based on your visits to our site and other sites</li>
+                  <li><strong>Personalized Ads:</strong> Ads may be personalized based on your interests and browsing behavior</li>
+                  <li><strong>Opt-out Options:</strong> You can opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">Google Ad Settings</a></li>
+                </ul>
+                <p className="text-gray-300 leading-relaxed mb-0">For more information about Google's advertising practices, visit: <a href="https://policies.google.com/technologies/ads" className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">https://policies.google.com/technologies/ads</a></p>
               </div>
               
               {/* CCPA Privacy Rights Section */}

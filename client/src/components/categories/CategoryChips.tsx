@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Category } from "@/types";
+import { useLocation } from "wouter";
 
 interface CategoryChipsProps {
   categories: Category[];
@@ -15,8 +16,14 @@ export default function CategoryChips({
   onCategorySelect,
   className
 }: CategoryChipsProps) {
+  const [, navigate] = useLocation();
   
-  const handleCategoryClick = (categoryId: number | null) => {
+  const handleCategoryClick = (categoryId: number | null, categorySlug?: string) => {
+    if (categoryId === null) {
+      navigate('/');
+    } else if (categorySlug) {
+      navigate(`/category/${categorySlug}`);
+    }
     onCategorySelect?.(categoryId);
   };
 
@@ -49,7 +56,7 @@ export default function CategoryChips({
         {categories?.map((category) => (
           <li key={category.id} className="snap-start shrink-0">
             <button
-              onClick={() => handleCategoryClick(category.id)}
+              onClick={() => handleCategoryClick(category.id, category.slug)}
               className={cn(
                 "px-3 py-1.5 rounded-full border text-[13px] font-medium transition-all duration-200",
                 "touch-manipulation active:scale-95 whitespace-nowrap",

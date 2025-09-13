@@ -118,15 +118,15 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   
-  // Set Content Security Policy to allow AdSense, Google Tag Manager and other needed resources
+  // Set Content Security Policy to allow AdSense, Google Tag Manager, OAuth domains and other needed resources
   res.setHeader('Content-Security-Policy', 
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://www.googletagservices.com https://adservice.google.com https://www.google.com https://www.gstatic.com https://cse.google.com https://www.googletagmanager.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "img-src 'self' data: https: http:; " +
     "font-src 'self' https://fonts.gstatic.com; " +
-    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; " + 
-    "connect-src 'self' https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://www.google-analytics.com https://www.googletagmanager.com https://adservice.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.g.doubleclick.net https://ep1.adtrafficquality.google;"
+    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://accounts.google.com https://appleid.apple.com; " + 
+    "connect-src 'self' https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://www.google-analytics.com https://www.googletagmanager.com https://adservice.google.com https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.g.doubleclick.net https://ep1.adtrafficquality.google https://accounts.google.com https://appleid.apple.com;"
   );
   
   if (req.method === 'OPTIONS') {

@@ -11,7 +11,9 @@ import AnalyticsDashboard from "@/pages/admin/AnalyticsDashboard";
 import GameAnalytics from "@/pages/admin/GameAnalytics";
 import Admin from "@/pages/Admin";
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import AuthTest from "@/pages/AuthTest";
+import Leaderboard from "@/pages/Leaderboard";
 import ChallengePage from "@/pages/ChallengePage";
 import AboutPage from "@/pages/AboutPage";
 import TermsPage from "@/pages/TermsPage";
@@ -24,6 +26,8 @@ import BlogPage from "@/pages/BlogPage";
 import BlogPostPage from "@/pages/BlogPostPage";
 import BlogCreate from "@/pages/admin/blog/BlogCreate";
 import Developers from "@/pages/Developers";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
 import { GamesListByCategory } from "@/pages/GamesListByCategory";
 import Search from "@/pages/Search";
 import SubmitGame from "@/pages/SubmitGame";
@@ -48,6 +52,7 @@ function Router() {
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/leaderboard" component={Leaderboard} />
           <Route path="/search" component={Search} />
           <Route path="/category/:slug" component={GamesListByCategory} />
           <Route path="/games/:slug" component={GameDetailsPage} />
@@ -58,6 +63,9 @@ function Router() {
           <Route path="/admin" component={Dashboard} />
           <Route path="/admin/:tab" component={Dashboard} />
           <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/settings" component={Settings} />
           <Route path="/auth-test" component={AuthTest} />
           <Route path="/blog" component={BlogPage} />
           <Route path="/blog/:slug" component={BlogPostPage} />

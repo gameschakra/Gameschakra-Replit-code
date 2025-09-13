@@ -2,9 +2,9 @@ import express, { Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
+import passport from "./auth/passport";
 import bcrypt from "bcryptjs";
+import { authRouter } from "./routes/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -19,8 +19,11 @@ import { analyticsTracker } from "./middleware/analytics";
 import { z } from "zod";
 import { 
   insertUserSchema, insertGameSchema, insertCategorySchema, 
-  insertFavoriteSchema, insertRecentlyPlayedSchema 
+  insertFavoriteSchema, insertRecentlyPlayedSchema,
+  users 
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 import challengeRoutes from "./routes/challengeRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import { setupBlogRoutes } from "./routes/blogRoutes";
@@ -157,67 +160,28 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   app.set('trust proxy', 1);
   
   const sessionMiddleware = session({
-    name: 'gamehub.sid',
+    name: 'gc_sid',
     secret: process.env.SESSION_SECRET || "gamehub-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
-      secure: isProd,          // false on localhost, true in production
-      sameSite: isProd ? 'none' : 'lax',
-      domain: isProd ? process.env.COOKIE_DOMAIN || '.gameschakra.com' : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+      httpOnly: false,  // Allow JS access in development for debugging
+      secure: false,    // Always false for localhost testing
+      sameSite: 'lax',  // Use lax for localhost
+      path: '/',        // Explicit path
+      maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days in development
     },
     rolling: true,
-    proxy: true,
+    proxy: false,  // Disable proxy for localhost
     genid: () => crypto.randomUUID()
   });
   
   // Apply session middleware
   app.use(sessionMiddleware);
 
-  // Configure passport
+  // Configure passport (strategies configured in ./auth/passport.ts)
   app.use(passport.initialize());
   app.use(passport.session());
-
-  // User serialization
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      if (!user) {
-        return done(null, false); // User not found, invalidate session
-      }
-      done(null, user);
-    } catch (err) {
-      console.error('Session deserialization error:', err);
-      done(err, null);
-    }
-  });
-
-  // Local strategy for username/password login
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Incorrect username" });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-          return done(null, false, { message: "Incorrect password" });
-        }
-
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    })
-  );
 
   // Create user loader middleware
   app.use(loadUser);
@@ -252,138 +216,6 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     next();
   });
 
-  // Authentication Routes
-  api.post("/auth/register", async (req: Request, res: Response) => {
-    try {
-      const registrationSchema = insertUserSchema.extend({
-        confirmPassword: z.string()
-      }).refine(data => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ["confirmPassword"]
-      });
-
-      const validatedData = registrationSchema.parse(req.body);
-      
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(validatedData.username);
-      if (existingUser) {
-        // Content-Type header is now set by middleware
-        return res.status(400).json({ message: "Username is already taken" });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-
-      // Create user
-      const newUser = await storage.createUser({
-        username: validatedData.username,
-        password: hashedPassword,
-        email: validatedData.email,
-        isAdmin: validatedData.isAdmin || false,
-        avatarUrl: validatedData.avatarUrl
-      });
-
-      // Remove password from response
-      const { password, ...userWithoutPassword } = newUser;
-
-      // Log the user in
-      req.session.userId = newUser.id;
-      req.session.isAdmin = newUser.isAdmin;
-
-      res.setHeader('Content-Type', 'application/json');
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      res.setHeader('Content-Type', 'application/json');
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      res.status(500).json({ message: `Registration failed: ${error.message}` });
-    }
-  });
-
-  api.post("/auth/login", (req: Request, res: Response, next) => {
-    passport.authenticate("local", (err, user, info) => {
-      if (err) {
-        console.error('Login authentication error:', err);
-        return next(err);
-      }
-      if (!user) {
-        console.log('Login failed:', info?.message || 'Invalid credentials');
-        // Content-Type header is now set by middleware
-        return res.status(401).json({ message: info?.message || 'Invalid credentials' });
-      }
-      req.login(user, (err) => {
-        if (err) {
-          console.error('Login session error:', err);
-          return next(err);
-        }
-        
-        // Set session data
-        req.session.userId = user.id;
-        req.session.isAdmin = user.isAdmin;
-        
-        // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        
-        console.log('Login successful for user:', user.username);
-        // Content-Type header is now set by middleware
-        return res.json(userWithoutPassword);
-      });
-    })(req, res, next);
-  });
-
-  api.post("/auth/logout", (req: Request, res: Response) => {
-    // Access our environment detection variables
-    const isReplitDev = process.env.REPL_ID && process.env.REPL_OWNER && !process.env.REPL_SLUG;
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    console.log('Logout request received, environment:', { isReplitDev, isProduction });
-    
-    req.logout(() => {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Session destruction error during logout:', err);
-          return res.status(500).json({ message: "Logout failed" });
-        }
-        
-        // Clear the session cookie with settings that match our environment-specific session settings
-        res.clearCookie('gamehub.sid', {
-          path: '/',
-          httpOnly: true,
-          secure: false, // Fixed to match our session cookie settings
-          sameSite: 'lax', // Fixed to match our session cookie settings
-        });
-        
-        console.log('Logout successful, cleared cookie with consistent settings');
-        res.json({ message: "Logged out successfully" });
-      });
-    });
-  });
-
-  api.get("/auth/user", (req: Request, res: Response) => {
-    console.log('Auth check - isAuthenticated:', req.isAuthenticated());
-    console.log('Auth check - session:', req.session);
-    console.log('Auth check - cookies:', req.headers.cookie);
-    
-    res.setHeader('Content-Type', 'application/json');
-    
-    if (req.user) {
-      const { password, ...userWithoutPassword } = req.user;
-      return res.json(userWithoutPassword);
-    }
-    res.status(401).json({ message: "Not authenticated" });
-  });
-  
-  // Debug route for session debugging
-  api.get("/auth/debug-session", (req: Request, res: Response) => {
-    return res.json({
-      isAuthenticated: req.isAuthenticated(),
-      hasSession: !!req.session,
-      hasCookies: !!req.headers.cookie,
-      sessionID: req.sessionID,
-      // Don't send the full session object to avoid leaking sensitive data
-    });
-  });
 
   // Category Routes
   api.get("/categories", async (req: Request, res: Response) => {
@@ -1174,7 +1006,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   api.post("/games/:id/play", async (req: Request, res: Response) => {
     try {
       const gameId = Number(req.params.id);
-      const userId = req.session.userId;
+      const userId = (req.user as any)?.id;
       
       await gameService.trackGamePlay(gameId, userId);
       
@@ -1187,7 +1019,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   // Favorites Routes
   api.get("/favorites", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId!;
+      const userId = (req.user as any)?.id;
       const favorites = await storage.getFavoritesByUserId(userId);
       res.json(favorites);
     } catch (error) {
@@ -1197,8 +1029,18 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
 
   api.post("/favorites/:gameId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId!;
+      console.log('POST /api/favorites/:gameId - Request details:', {
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user,
+        session: req.session,
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie
+      });
+      
+      const userId = (req.user as any)?.id;
       const gameId = Number(req.params.gameId);
+      
+      console.log('Favorites API - userId:', userId, 'gameId:', gameId);
       
       // Check if game exists
       const game = await storage.getGameById(gameId);
@@ -1213,13 +1055,14 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         isFavorite
       });
     } catch (error) {
+      console.error('Error in favorites API:', error);
       res.status(500).json({ message: `Error toggling favorite: ${error.message}` });
     }
   });
 
   api.get("/favorites/is-favorite/:gameId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId!;
+      const userId = (req.user as any)?.id;
       const gameId = Number(req.params.gameId);
       
       const isFavorite = await storage.isGameFavorite(userId, gameId);
@@ -1233,7 +1076,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   // Recently Played Routes
   api.get("/recently-played", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId!;
+      const userId = (req.user as any)?.id;
       const limit = req.query.limit ? Number(req.query.limit) : 3;
       
       const recentlyPlayed = await storage.getRecentlyPlayedByUserId(userId, limit);
@@ -1370,7 +1213,104 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
+  // Admin Users endpoint
+  api.get("/admin/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const allUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          username: users.username,
+          phone: users.phone,
+          city: users.city,
+          country: users.country,
+          isBlocked: users.isBlocked,
+          isAdmin: users.isAdmin,
+          avatarUrl: users.avatarUrl,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .orderBy(users.createdAt);
+
+      res.json({ 
+        users: allUsers,
+        total: allUsers.length 
+      });
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch users',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Block user endpoint
+  api.post("/admin/users/:id/block", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (!userId) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      // Update user to blocked status
+      await db
+        .update(users)
+        .set({ 
+          isBlocked: true,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ 
+        success: true, 
+        message: 'User blocked successfully' 
+      });
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      res.status(500).json({ 
+        message: 'Failed to block user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Unblock user endpoint
+  api.post("/admin/users/:id/unblock", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (!userId) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      // Update user to unblocked status
+      await db
+        .update(users)
+        .set({ 
+          isBlocked: false,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ 
+        success: true, 
+        message: 'User unblocked successfully' 
+      });
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      res.status(500).json({ 
+        message: 'Failed to unblock user',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Mount API routes
+  // Mount auth routes first
+  api.use("/auth", authRouter);
+  
   // Mount the challenge routes
   api.use("/challenges", challengeRoutes);
   api.use("/analytics", analyticsRoutes);

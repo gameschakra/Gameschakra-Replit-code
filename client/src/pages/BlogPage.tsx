@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { BlogPost } from '@/types';
-import PageLayout from '@/components/layout/PageLayout';
+// Removed PageLayout import - using global header/footer from App.tsx
 import Container from '@/components/ui/container';
 import BlogPostCard from '@/components/blog/BlogPostCard';
 import BlogCategorySidebar from '@/components/blog/BlogCategorySidebar';
@@ -71,7 +71,7 @@ const BlogPage: React.FC = () => {
   const totalPages = data?.totalPages || 1;
 
   return (
-    <PageLayout>
+    <>
       <Helmet>
         <title>Blog - GamesChakra</title>
         <meta
@@ -178,7 +178,7 @@ const BlogPage: React.FC = () => {
           </div>
         </Container>
       </section>
-    </PageLayout>
+    </>
   );
 };
 

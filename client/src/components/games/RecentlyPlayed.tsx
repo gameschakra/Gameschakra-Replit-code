@@ -1,18 +1,14 @@
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { RecentlyPlayedWithGame } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRecentlyPlayed } from "@/hooks/useRecentlyPlayed";
 
 export default function RecentlyPlayed() {
-  const { data: recentlyPlayed, isLoading } = useQuery<RecentlyPlayedWithGame[]>({
-    queryKey: ["/api/recently-played"],
-    enabled: false, // This only works for authenticated users, don't auto fetch
-  });
+  const { recentGames, isLoading } = useRecentlyPlayed();
 
   // If no data and not loading, don't show the section
-  if (!isLoading && (!recentlyPlayed || recentlyPlayed.length === 0)) {
+  if (!isLoading && recentGames.length === 0) {
     return null;
   }
 
@@ -44,8 +40,8 @@ export default function RecentlyPlayed() {
               </div>
             ))
           ) : (
-            recentlyPlayed?.map(item => (
-              <div key={item.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+            recentGames?.map(item => (
+              <div key={item.gameId} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                 <div className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <div className="relative h-16 w-28 flex-shrink-0">
                     <img 
@@ -80,7 +76,7 @@ export default function RecentlyPlayed() {
             ))
           )}
           
-          {recentlyPlayed?.length === 0 && (
+          {recentGames?.length === 0 && (
             <div className="p-6 text-center">
               <p className="text-gray-500 dark:text-gray-400">You haven't played any games yet.</p>
               <Button asChild className="mt-4">

@@ -26,6 +26,7 @@ import Panel from "@/components/ui/Panel";
 import HorizontalCards from "@/components/ui/HorizontalCards";
 import { ColorIcon } from "@/components/ui/ColorIcon";
 import { Home as HomeIcon, Sparkles, TrendingUp, Star, Award, Users, Trophy, Calendar, Heart, History, Medal } from "lucide-react";
+import { useRecentlyPlayed } from "@/hooks/useRecentlyPlayed";
 // GC_SEO: Import new centralized SEO utilities
 import { 
   applyMeta, 
@@ -101,11 +102,8 @@ export default function Home() {
     enabled: activeSection === "favorites",
   });
 
-  // Get user's recently played games
-  const { data: recentlyPlayed, isLoading: recentlyPlayedLoading } = useQuery({
-    queryKey: ["/api/recently-played", { limit: 100 }], // बढ़ाया गया limit
-    enabled: activeSection === "recent",
-  });
+  // Get user's recently played games - now works for all users
+  const { recentGames: recentlyPlayed, isLoading: recentlyPlayedLoading } = useRecentlyPlayed();
   
   // Get challenges
   const { data: activeChallenges, isLoading: activeChallengesLoading } = useQuery<Challenge[]>({
@@ -218,15 +216,26 @@ export default function Home() {
 
   // Get current games to display based on active section
   const getCurrentGames = () => {
-    if (activeSection === "popular") return toItemsArray<Game>(popularGames);
-    if (activeSection === "featured") return toItemsArray<Game>(featuredGames);
-    if (activeSection === "favorites") {
-      return Array.isArray(favorites) ? favorites.map((f: any) => f.game) : [];
+    let gamesToShow: Game[] = [];
+    
+    if (activeSection === "popular") gamesToShow = toItemsArray<Game>(popularGames);
+    else if (activeSection === "featured") gamesToShow = toItemsArray<Game>(featuredGames);
+    else if (activeSection === "favorites") {
+      gamesToShow = Array.isArray(favorites) ? favorites.map((f: any) => f.game) : [];
     }
-    if (activeSection === "recent") {
-      return Array.isArray(recentlyPlayed) ? recentlyPlayed.map((r: any) => r.game) : [];
+    else if (activeSection === "recent") {
+      gamesToShow = Array.isArray(recentlyPlayed) ? recentlyPlayed.map((r: any) => r.game) : [];
     }
-    return toItemsArray<Game>(games); // Default for all, categories, and search
+    else {
+      gamesToShow = toItemsArray<Game>(games); // Default for all, categories, and search
+    }
+    
+    // Apply category filter if selectedCategory is set
+    if (selectedCategory !== null && gamesToShow.length > 0) {
+      gamesToShow = gamesToShow.filter(game => game.categoryId === selectedCategory);
+    }
+    
+    return gamesToShow;
   };
 
   // Check if current section is loading
@@ -878,7 +887,10 @@ export default function Home() {
             <CategoryChips 
               categories={categories || []}
               selectedCategory={selectedCategory}
-              onCategorySelect={setSelectedCategory}
+              onCategorySelect={(categoryId) => {
+                setSelectedCategory(categoryId);
+                setActiveSection(categoryId === null ? 'all' : 'categories');
+              }}
             />
           </div>
 

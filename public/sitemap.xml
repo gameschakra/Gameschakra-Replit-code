@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://gameschakra.com/</loc>
-    <lastmod>2025-09-05T05:45:10.499Z</lastmod>
+    <lastmod>2025-09-12T20:37:53.431Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
@@ -49,6 +49,96 @@
   <url>
     <loc>https://gameschakra.com/blog</loc>
     <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/jett-halloween</loc>
+    <lastmod>2025-09-11T22:41:54.926Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/cutietuttifrutti</loc>
+    <lastmod>2025-09-11T22:40:56.809Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/hopping-crowns</loc>
+    <lastmod>2025-09-06T10:50:08.637Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/ninja-pumpkin</loc>
+    <lastmod>2025-09-06T10:49:20.161Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/helicopter-fuel</loc>
+    <lastmod>2025-09-06T10:43:30.773Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/loonie-birds</loc>
+    <lastmod>2025-09-04T13:19:26.025Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/star-blaster</loc>
+    <lastmod>2025-08-29T23:44:47.070Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/coloured-circle</loc>
+    <lastmod>2025-08-29T23:39:20.790Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/jumper</loc>
+    <lastmod>2025-08-24T21:02:36.147Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/pac-man</loc>
+    <lastmod>2025-08-24T21:02:04.864Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/ricochet</loc>
+    <lastmod>2025-08-24T21:01:49.903Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/stickman-fighter</loc>
+    <lastmod>2025-08-24T21:00:04.422Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/number-snake</loc>
+    <lastmod>2025-08-24T20:59:41.000Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/hungry-numbers</loc>
+    <lastmod>2025-08-24T20:56:03.031Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://gameschakra.com/games/equations-right-or-wrong</loc>
+    <lastmod>2025-08-24T20:55:05.617Z</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 </urlset>

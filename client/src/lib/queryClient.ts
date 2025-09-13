@@ -12,10 +12,11 @@ async function throwIfResNotOk(res: Response) {
       const contentType = res.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const errorResponse = await responseClone.json();
-        if (errorResponse && errorResponse.message) {
-          errorMessage = typeof errorResponse.message === 'string' 
-            ? errorResponse.message 
-            : JSON.stringify(errorResponse.message);
+        if (errorResponse && (errorResponse.message || errorResponse.error)) {
+          const serverMessage = errorResponse.message || errorResponse.error;
+          errorMessage = typeof serverMessage === 'string' 
+            ? serverMessage 
+            : JSON.stringify(serverMessage);
         }
       } else {
         // If not JSON, try to read as text
@@ -59,6 +60,12 @@ export async function apiRequest<T = any>(
   console.log(`[API Call] Headers:`, headers);
   console.log(`[API Call] Data:`, options.isFormData ? 'FormData object' : data);
   console.log(`[API Call] Current cookies:`, document.cookie);
+  
+  // Extract session cookie specifically  
+  const sessionCookie = document.cookie
+    .split(';')
+    .find(cookie => cookie.trim().startsWith('gc_sid='));
+  console.log(`[API Call] Session cookie (gc_sid): ${sessionCookie || 'NOT FOUND'}`);
   
   // Detect if we're in localhost development environment
   const isLocalDevelopment = window.location.hostname === 'localhost' || 
@@ -121,8 +128,19 @@ export async function apiRequest<T = any>(
       try {
         const text = await res.text();
         console.warn(`[API Response] Response text: ${text.slice(0, 200)}`);
+        
+        // Check if this is an authentication redirect (HTML response with login form)
+        if (contentType?.includes('text/html') && (text.includes('<!DOCTYPE html') || text.includes('<html'))) {
+          // This indicates the session has expired and server redirected to login page
+          console.error('[API Error] Session expired - got HTML response instead of JSON');
+          throw new Error('Session expired. Please refresh the page and try again.');
+        }
+        
         throw new Error(`Server returned non-JSON response: ${contentType}`);
       } catch (error) {
+        if (error.message.includes('session has expired')) {
+          throw error;
+        }
         throw new Error('Failed to parse server response');
       }
     }

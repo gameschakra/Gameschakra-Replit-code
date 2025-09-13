@@ -67,7 +67,7 @@ const UpcomingChallengeCard: React.FC<UpcomingChallengeCardProps> = ({
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg flex items-center">
+            <CardTitle className="text-base md:text-lg flex items-center">
               <span className="material-icons text-blue-500 mr-2 group-hover:animate-pulse">schedule</span>
               {challenge.title}
             </CardTitle>
@@ -75,31 +75,31 @@ const UpcomingChallengeCard: React.FC<UpcomingChallengeCardProps> = ({
               Upcoming
             </Badge>
           </div>
-          <CardDescription className="line-clamp-1 text-sm mt-1">
+          <CardDescription className="line-clamp-1 text-sm md:text-base mt-1">
             {challenge.description}
           </CardDescription>
           
           <div className="flex flex-col gap-2 mt-3">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm md:text-base">
               <span className="material-icons text-gray-400 text-sm">event</span>
               <span>
                 Starts in: {calculateCountdown(challenge.startDate)}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm md:text-base">
               <span className="material-icons text-gray-400 text-sm">update</span>
               <span>
                 Duration: {Math.ceil((new Date(challenge.endDate).getTime() - new Date(challenge.startDate).getTime()) / (1000 * 60 * 60 * 24))} days
               </span>
             </div>
             {challenge.maxScore && challenge.maxScore > 0 && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm md:text-base">
                 <span className="material-icons text-gray-400 text-sm">leaderboard</span>
                 <span>Max score: {challenge.maxScore}</span>
               </div>
             )}
             {challenge.gameId && challenge.game && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm md:text-base">
                 <span className="material-icons text-gray-400 text-sm">sports_esports</span>
                 <span>Game: {challenge.game.title || "Game"}</span>
               </div>
@@ -107,8 +107,8 @@ const UpcomingChallengeCard: React.FC<UpcomingChallengeCardProps> = ({
             
             {/* Show prizes if available */}
             <div className="mt-1 p-2 bg-blue-50 rounded-md">
-              <div className="text-xs font-medium text-blue-600 mb-1">Prizes</div>
-              <div className="text-sm">
+              <div className="text-xs md:text-sm font-medium text-blue-600 mb-1">Prizes</div>
+              <div className="text-sm md:text-base">
                 <span className="material-icons text-amber-500 text-sm align-middle mr-1">star</span>
                 {prizesText}
               </div>

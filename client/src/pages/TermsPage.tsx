@@ -42,14 +42,65 @@ export default function TermsPage() {
                 <p className="text-gray-300 leading-relaxed mb-0">The following terminology applies to these Terms and Conditions, Privacy Statement and Disclaimer Notice and all Agreements: "Client", "You" and "Your" refers to you, the person log on this website and compliant to the Company's terms and conditions. "The Company", "Ourselves", "We", "Our" and "Us", refers to our Company. "Party", "Parties", or "Us", refers to both the Client and ourselves.</p>
               </div>
               
+              {/* User Accounts Section */}
+              <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
+                <div className="flex items-center mb-4">
+                  <span className="material-icons text-blue-400 mr-3">account_circle</span>
+                  <h2 className="text-2xl font-bold text-white m-0">User Accounts and Registration</h2>
+                </div>
+                <p className="text-gray-300 leading-relaxed mb-4">To access certain features of GamesChakra, you may be required to create an account. When registering for an account, you agree to:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Provide accurate information:</strong> All information provided during registration must be current, complete, and accurate</li>
+                  <li><strong>Maintain security:</strong> You are responsible for maintaining the confidentiality of your account credentials</li>
+                  <li><strong>Accept responsibility:</strong> You are responsible for all activities that occur under your account</li>
+                  <li><strong>Notify us of unauthorized use:</strong> You must immediately notify us of any unauthorized access to your account</li>
+                </ul>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Google OAuth Authentication</h3>
+                <p className="text-gray-300 leading-relaxed mb-4">We offer Google OAuth as an authentication method. By using Google sign-in, you acknowledge that:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li>Your Google account information (name, email, profile picture) will be used to create your GamesChakra account</li>
+                  <li>You consent to our access to your basic Google profile information as outlined in our Privacy Policy</li>
+                  <li>Google's Terms of Service and Privacy Policy also apply to your use of Google authentication</li>
+                  <li>You can revoke this access through your Google Account settings at any time</li>
+                </ul>
+                
+                <p className="text-gray-300 leading-relaxed mb-0">We reserve the right to suspend or terminate accounts that violate these terms or engage in fraudulent, abusive, or illegal activities.</p>
+              </div>
+              
+              {/* Data Collection and Use Section */}
+              <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
+                <div className="flex items-center mb-4">
+                  <span className="material-icons text-green-400 mr-3">storage</span>
+                  <h2 className="text-2xl font-bold text-white m-0">Data Collection and Use</h2>
+                </div>
+                <p className="text-gray-300 leading-relaxed mb-4">By using GamesChakra, you acknowledge and consent to our collection and use of your information as described in our <Link href="/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy Policy</Link>. This includes:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Account Information:</strong> Personal details provided during registration or through Google OAuth</li>
+                  <li><strong>Gaming Activity:</strong> Game play history, scores, achievements, favorites, and preferences</li>
+                  <li><strong>Technical Data:</strong> IP address, browser information, device details, and usage analytics</li>
+                  <li><strong>Communication Data:</strong> Messages, support requests, and feedback you provide</li>
+                </ul>
+                <p className="text-gray-300 leading-relaxed mb-0">You have the right to access, modify, or delete your personal data as outlined in our Privacy Policy and applicable data protection laws.</p>
+              </div>
+              
               {/* Cookies Section */}
               <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
                 <div className="flex items-center mb-4">
                   <span className="material-icons text-amber-400 mr-3">cookie</span>
-                  <h2 className="text-2xl font-bold text-white m-0">Cookies</h2>
+                  <h2 className="text-2xl font-bold text-white m-0">Cookies and Tracking</h2>
                 </div>
-                <p className="text-gray-300 leading-relaxed mb-4">We employ the use of cookies. By accessing GamesChakra, you agreed to use cookies in agreement with the GamesChakra's Privacy Policy.</p>
-                <p className="text-gray-300 leading-relaxed mb-0">Most interactive websites use cookies to let us retrieve the user's details for each visit. Cookies are used by our website to enable the functionality of certain areas to make it easier for people visiting our website. Some of our affiliate/advertising partners may also use cookies.</p>
+                <p className="text-gray-300 leading-relaxed mb-4">We employ the use of cookies and similar tracking technologies. By accessing GamesChakra, you consent to the use of cookies in agreement with our Privacy Policy.</p>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Types of Cookies We Use</h3>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Essential Cookies:</strong> Required for login functionality and account management</li>
+                  <li><strong>Analytics Cookies:</strong> Help us understand how you use our website to improve user experience</li>
+                  <li><strong>Advertising Cookies:</strong> Used by Google AdSense to display relevant advertisements</li>
+                  <li><strong>Preference Cookies:</strong> Remember your settings and customization choices</li>
+                </ul>
+                
+                <p className="text-gray-300 leading-relaxed mb-0">You can control cookie preferences through your browser settings, though disabling certain cookies may affect website functionality. Third-party advertising partners like Google may also use cookies as described in their privacy policies.</p>
               </div>
               
               {/* License Section */}
@@ -69,22 +120,50 @@ export default function TermsPage() {
                 <p className="text-gray-300 leading-relaxed mb-0">This Agreement shall begin on the date hereof.</p>
               </div>
               
-              {/* User Comments Section */}
+              {/* Third-Party Services Section */}
               <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
                 <div className="flex items-center mb-4">
-                  <span className="material-icons text-pink-400 mr-3">forum</span>
-                  <h2 className="text-2xl font-bold text-white m-0">User Comments</h2>
+                  <span className="material-icons text-blue-400 mr-3">integration_instructions</span>
+                  <h2 className="text-2xl font-bold text-white m-0">Third-Party Services and Advertising</h2>
                 </div>
-                <p className="text-gray-300 leading-relaxed mb-4">Parts of this website offer an opportunity for users to post and exchange opinions and information in certain areas of the website. GamesChakra does not filter, edit, publish or review Comments prior to their presence on the website. Comments do not reflect the views and opinions of GamesChakra, its agents and/or affiliates.</p>
-                <p className="text-gray-300 leading-relaxed mb-4">GamesChakra reserves the right to monitor all Comments and to remove any Comments which can be considered inappropriate, offensive or causes breach of these Terms and Conditions.</p>
-                <p className="text-gray-300 leading-relaxed mb-4">You warrant and represent that:</p>
+                <p className="text-gray-300 leading-relaxed mb-4">GamesChakra integrates with various third-party services to provide you with enhanced functionality. By using our website, you also agree to the terms and policies of these services:</p>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Google Services</h3>
                 <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
-                  <li>You are entitled to post the Comments on our website and have all necessary licenses and consents to do so;</li>
-                  <li>The Comments do not invade any intellectual property right, including without limitation copyright, patent or trademark of any third party;</li>
-                  <li>The Comments do not contain any defamatory, libelous, offensive, indecent or otherwise unlawful material which is an invasion of privacy;</li>
-                  <li>The Comments will not be used to solicit or promote business or custom or present commercial activities or unlawful activity.</li>
+                  <li><strong>Google OAuth:</strong> For authentication and account management</li>
+                  <li><strong>Google AdSense:</strong> For displaying targeted advertisements</li>
+                  <li><strong>Google Analytics:</strong> For website analytics and performance monitoring</li>
                 </ul>
-                <p className="text-gray-300 leading-relaxed mb-0">You hereby grant GamesChakra a non-exclusive license to use, reproduce, edit and authorize others to use, reproduce and edit any of your Comments in any and all forms, formats or media.</p>
+                
+                <h3 className="text-lg font-bold text-white mb-3">Advertising Terms</h3>
+                <p className="text-gray-300 leading-relaxed mb-4">We display advertisements through Google AdSense. By using our website, you acknowledge that:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li>Advertisements are provided by third parties and not endorsed by GamesChakra</li>
+                  <li>We are not responsible for the content, accuracy, or practices of advertisers</li>
+                  <li>Clicking on ads may redirect you to external websites governed by their own terms</li>
+                  <li>Ad personalization is managed by Google and can be controlled through your Google Ad Settings</li>
+                </ul>
+                
+                <p className="text-gray-300 leading-relaxed mb-0">These third-party services have their own terms of service and privacy policies. We encourage you to review them as they govern your use of those services.</p>
+              </div>
+              
+              {/* User Conduct Section */}
+              <div className="bg-gray-700/30 rounded-lg p-6 border border-gray-600/30 mb-8">
+                <div className="flex items-center mb-4">
+                  <span className="material-icons text-pink-400 mr-3">group</span>
+                  <h2 className="text-2xl font-bold text-white m-0">User Conduct and Acceptable Use</h2>
+                </div>
+                <p className="text-gray-300 leading-relaxed mb-4">When using GamesChakra, you agree to conduct yourself respectfully and responsibly. You must not:</p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-300 mb-4">
+                  <li><strong>Violate laws:</strong> Engage in any illegal activities or violate applicable laws</li>
+                  <li><strong>Harm others:</strong> Harass, threaten, or harm other users or third parties</li>
+                  <li><strong>Misuse accounts:</strong> Create fake accounts, share accounts, or impersonate others</li>
+                  <li><strong>Distribute malware:</strong> Upload viruses, malware, or malicious code</li>
+                  <li><strong>Spam or abuse:</strong> Send unsolicited messages or abuse our platform features</li>
+                  <li><strong>Infringe rights:</strong> Violate intellectual property rights or privacy of others</li>
+                  <li><strong>Circumvent security:</strong> Attempt to bypass security measures or access restrictions</li>
+                </ul>
+                <p className="text-gray-300 leading-relaxed mb-0">Violation of these conduct rules may result in account suspension, termination, and potential legal action. We reserve the right to investigate and take appropriate action against violators.</p>
               </div>
               
               {/* Hyperlinking Section */}

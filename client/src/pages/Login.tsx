@@ -17,27 +17,37 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
+import { SocialButtons } from "@/components/auth/SocialButtons";
 
 // Login form schema
 const loginSchema = z.object({
-  username: z.string().min(3, {
-    message: "Username must be at least 3 characters.",
+  email: z.string().email({
+    message: "Invalid email format. Please enter a valid email address (e.g., user@example.com)",
   }),
-  password: z.string().min(6, {
-    message: "Password must be at least 6 characters.",
+  password: z.string().min(1, {
+    message: "Password is required.",
   }),
 });
 
 // Registration form schema
 const registerSchema = z.object({
-  username: z.string().min(3, {
-    message: "Username must be at least 3 characters.",
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }).max(80, {
+    message: "Name must be less than 80 characters.",
   }),
+  username: z.string()
+    .min(3, { message: "Username must be at least 3 characters." })
+    .max(20, { message: "Username must be less than 20 characters." })
+    .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores." }),
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(6, {
-    message: "Password must be at least 6 characters.",
+  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, {
+    message: "Please enter a valid phone number.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -49,8 +59,42 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [authDebugState, setAuthDebugState] = useState<any>(null);
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  
+  // Check for auth errors in URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    if (error === 'google_auth_failed') {
+      toast({
+        title: 'Google Sign-in Failed',
+        description: 'There was a problem signing in with Google. Please try again.',
+        variant: 'destructive',
+      });
+    } else if (error === 'google_not_configured') {
+      toast({
+        title: 'Google Sign-in Not Available',
+        description: 'Google sign-in is currently being set up. Please use email/password login for now.',
+        variant: 'destructive',
+      });
+    } else if (error === 'apple_auth_failed') {
+      toast({
+        title: 'Apple Sign-in Failed', 
+        description: 'There was a problem signing in with Apple. Please try again.',
+        variant: 'destructive',
+      });
+    }
+    
+    const success = urlParams.get('auth');
+    if (success === 'success') {
+      toast({
+        title: 'Sign-in Successful',
+        description: 'You have been successfully signed in.',
+      });
+      navigate('/');
+    }
+  }, [toast, navigate]);
   
   // Redirect if already logged in
   useEffect(() => {
@@ -68,7 +112,7 @@ export default function Login() {
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -77,8 +121,9 @@ export default function Login() {
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
+      name: "",
       email: "",
+      phone: "",
       password: "",
       confirmPassword: "",
     },
@@ -91,17 +136,21 @@ export default function Login() {
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true);
     try {
-      console.log("Login form submission with:", values.username);
-      const user = await login(values.username, values.password);
-      
-      console.log("Login successful, user:", user);
+      const user = await login(values.email, values.password);
       
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
       
-      // Redirect handled by useEffect at the top of component
+      // Small delay to ensure auth state updates, then redirect
+      setTimeout(() => {
+        if (user.isAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      }, 100);
     } catch (error: any) {
       console.error("Login submission error:", error);
       
@@ -119,15 +168,13 @@ export default function Login() {
   async function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true);
     try {
-      console.log("Registration form submission with:", values.username);
-      
       const user = await registerUser(
-        values.username,
         values.email,
-        values.password
+        values.password,
+        values.name,
+        values.phone,
+        values.username
       );
-      
-      console.log("Registration successful, user:", user);
       
       toast({
         title: "Registration successful",
@@ -148,82 +195,48 @@ export default function Login() {
     }
   }
 
-  // Log auth status for debugging
-  useEffect(() => {
-    console.log("Auth status:", { user, isAuthenticated, isLoading: authLoading });
-    setAuthDebugState({ user, isAuthenticated, isLoading: authLoading });
-  }, [user, isAuthenticated, authLoading]);
-  
+  // Check if feature is disabled
+  const featureAuthUI = import.meta.env.VITE_FEATURE_AUTH_UI !== '0';
+  if (!featureAuthUI) {
+    navigate('/');
+    return null;
+  }
+
   return (
-    <div className="container mx-auto flex flex-col justify-center items-center py-8">
-      {/* Debug info */}
-      <div className="w-full max-w-md mb-4 p-4 bg-slate-900 text-white rounded-md text-xs">
-        <h3 className="font-bold mb-2">Auth Status Debugging</h3>
-        <pre className="whitespace-pre-wrap overflow-auto max-h-32">
-          {authDebugState ? JSON.stringify(authDebugState, null, 2) : "Loading..."}
-        </pre>
-      </div>
-      
+    <div className="container mx-auto flex flex-col justify-center items-center py-8 px-4">
       <div className="w-full max-w-md">
-        <Tabs defaultValue="login" className="w-full">
+        <h1 className="text-2xl font-bold text-center mb-6">Welcome to GamesChakra</h1>
+        
+        <Tabs defaultValue="register" className="w-full">
           <TabsList className="grid grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login">Login</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="login">
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome Back</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your username" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Enter your password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Logging in..." : "Sign In"}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
           
           <TabsContent value="register">
             <Card>
               <CardHeader>
                 <CardTitle>Create an Account</CardTitle>
-                <CardDescription>Enter your details to create a new account</CardDescription>
+                <CardDescription>Sign up with Google or fill the form below to join GamesChakra</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <SocialButtons variant="register" disabled={isLoading} />
+                
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your full name" disabled={isLoading} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={registerForm.control}
                       name="username"
@@ -231,7 +244,7 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input placeholder="Choose a username" {...field} />
+                            <Input placeholder="Choose a unique username (e.g., player123)" disabled={isLoading} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -244,7 +257,20 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
+                            <Input type="email" placeholder="Enter your email" disabled={isLoading} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="Enter your phone number (e.g., +1234567890)" disabled={isLoading} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -257,7 +283,7 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="Create a password" {...field} />
+                            <Input type="password" placeholder="Create a password (min 8 characters)" disabled={isLoading} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -270,7 +296,7 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Confirm Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="Confirm your password" {...field} />
+                            <Input type="password" placeholder="Confirm your password" disabled={isLoading} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -278,6 +304,52 @@ export default function Login() {
                     />
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Creating account..." : "Sign Up"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Welcome Back</CardTitle>
+                <CardDescription>Sign in to your account or create a new one with Google</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SocialButtons variant="login" disabled={isLoading} />
+                
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Enter your email" disabled={isLoading} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter your password" disabled={isLoading} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </form>
                 </Form>

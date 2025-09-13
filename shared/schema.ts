@@ -1,7 +1,8 @@
-import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, pgEnum, jsonb, date, time, bigint, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, pgEnum, jsonb, date, time, bigint, numeric, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 // Re-export blog models
 export * from "./blog-schema";
@@ -10,12 +11,33 @@ export * from "./blog-schema";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Now nullable for social accounts
   email: text("email").notNull().unique(),
+  name: text("name").notNull(), // Full name field
+  phone: text("phone").unique(), // Phone number (nullable for social accounts initially, but unique when provided)
+  city: text("city"), // User's city
+  country: text("country"), // User's country
+  isBlocked: boolean("is_blocked").default(false).notNull(), // For blocking suspicious users
   isAdmin: boolean("is_admin").default(false).notNull(),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Social Accounts Table for OAuth linking
+export const accounts = pgTable("accounts", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider", { enum: ["google", "apple"] }).notNull(),
+  providerAccountId: text("provider_account_id").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  providerAccountIdIndex: unique("accounts_provider_account_idx")
+    .on(table.provider, table.providerAccountId),
+}));
 
 // Game Status Enum
 export const gameStatusEnum = pgEnum("game_status", ["draft", "published"]);
@@ -139,12 +161,21 @@ export const trafficSources = pgTable("traffic_sources", {
 // Define relations after all tables are defined
 // User relations
 export const usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
   favorites: many(favorites),
   recentlyPlayed: many(recentlyPlayed),
   challengeParticipants: many(challengeParticipants),
   challengeSubmissions: many(challengeSubmissions),
   gameAnalytics: many(gameAnalytics),
   trafficSources: many(trafficSources),
+}));
+
+// Account relations
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
 }));
 
 // Category relations
@@ -247,8 +278,15 @@ export const trafficSourcesRelations = relations(trafficSources, ({ one }) => ({
   }),
 }));
 
-// Schema for inserting users
+// Schema for inserting users - now includes name and phone
 export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema for inserting accounts
+export const insertAccountSchema = createInsertSchema(accounts).omit({
   id: true,
   createdAt: true,
 });
@@ -304,6 +342,9 @@ export const insertChallengeSubmissionSchema = createInsertSchema(challengeSubmi
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Account = typeof accounts.$inferSelect;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
 
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;

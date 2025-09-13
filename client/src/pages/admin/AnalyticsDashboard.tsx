@@ -31,6 +31,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/providers/AuthProvider";
 import { 
   PieChart, 
   Pie, 
@@ -91,50 +92,105 @@ export default function AnalyticsDashboard() {
 }
 
 function AnalyticsDashboardInner() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(subDays(new Date(), 6)), // Last 7 days
     to: endOfDay(new Date())
   });
+
+  // Safe date range handler
+  const handleDateRangeChange = (newDateRange: DateRange | undefined) => {
+    if (!newDateRange) {
+      // Reset to default range if undefined
+      setDateRange({
+        from: startOfDay(subDays(new Date(), 6)),
+        to: endOfDay(new Date())
+      });
+    } else {
+      setDateRange(newDateRange);
+    }
+  };
   const [currentMetric, setCurrentMetric] = useState<'visits' | 'starts'>('visits');
 
-  // Check admin auth
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['/api/auth/user'],
-    staleTime: 5 * 60 * 1000,
-  });
+  // Check admin auth - use AuthProvider
+  const { user, isLoading: userLoading } = useAuth();
 
-  // Format dates for API
-  const startDate = dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : format(subDays(new Date(), 6), "yyyy-MM-dd");
-  const endDate = dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+  // Format dates for API with proper null checks
+  const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : format(subDays(new Date(), 6), "yyyy-MM-dd");
+  const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
 
   // Fetch analytics summary
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery<AnalyticsSummary>({
-    queryKey: [`/api/analytics/summary?from=${startDate}&to=${endDate}`],
+    queryKey: ['analytics', 'summary', startDate, endDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/summary?from=${startDate}&to=${endDate}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics summary');
+      }
+      return response.json();
+    },
     staleTime: 120000, // 2 minutes
   });
 
   // Fetch time series data
   const { data: timeseries, isLoading: timeseriesLoading } = useQuery<TimeSeriesPoint[]>({
-    queryKey: [`/api/analytics/timeseries?metric=${currentMetric}&from=${startDate}&to=${endDate}`],
+    queryKey: ['analytics', 'timeseries', currentMetric, startDate, endDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/timeseries?metric=${currentMetric}&from=${startDate}&to=${endDate}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch timeseries data');
+      }
+      return response.json();
+    },
     staleTime: 120000,
   });
 
   // Fetch top games
   const { data: topGames, isLoading: topGamesLoading } = useQuery<TopGame[]>({
-    queryKey: [`/api/analytics/top-games?from=${startDate}&to=${endDate}&limit=10`],
+    queryKey: ['analytics', 'top-games', startDate, endDate, 10],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/top-games?from=${startDate}&to=${endDate}&limit=10`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch top games');
+      }
+      return response.json();
+    },
     staleTime: 300000, // 5 minutes
   });
 
   // Fetch device stats
   const { data: deviceStats, isLoading: deviceLoading } = useQuery<DeviceStats[]>({
-    queryKey: [`/api/analytics/devices?from=${startDate}&to=${endDate}`],
+    queryKey: ['analytics', 'devices', startDate, endDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/devices?from=${startDate}&to=${endDate}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch device stats');
+      }
+      return response.json();
+    },
     staleTime: 300000,
   });
 
   // Fetch referrer stats
   const { data: referrerStats, isLoading: referrerLoading } = useQuery<ReferrerStats[]>({
-    queryKey: [`/api/analytics/referrers?from=${startDate}&to=${endDate}&limit=10`],
+    queryKey: ['analytics', 'referrers', startDate, endDate, 10],
+    queryFn: async () => {
+      const response = await fetch(`/api/analytics/referrers?from=${startDate}&to=${endDate}&limit=10`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch referrer stats');
+      }
+      return response.json();
+    },
     staleTime: 300000,
   });
 
@@ -142,9 +198,9 @@ function AnalyticsDashboardInner() {
 
   useEffect(() => {
     if (!userLoading && (!user || !user.isAdmin)) {
-      setLocation('/login');
+      navigate('/login');
     }
-  }, [user, userLoading, setLocation]);
+  }, [user, userLoading, navigate]);
 
   if (userLoading) return <DashboardSkeleton />;
   if (!user || !user.isAdmin) return null; // Will redirect in useEffect
@@ -219,7 +275,7 @@ function AnalyticsDashboardInner() {
         <div className="flex items-center space-x-2">
           <DateRangePicker
             value={dateRange}
-            onChange={setDateRange}
+            onChange={handleDateRangeChange}
             className="w-[240px]"
           />
         </div>

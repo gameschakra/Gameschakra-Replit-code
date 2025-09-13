@@ -15,6 +15,20 @@
       "when": 1756075818910,
       "tag": "0001_oval_the_santerians",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757453263757,
+      "tag": "0002_red_nick_fury",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1757622125258,
+      "tag": "0003_famous_sabretooth",
+      "breakpoints": true
     }
   ]
 }

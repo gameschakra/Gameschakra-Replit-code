@@ -58,12 +58,11 @@ export class AnalyticsService {
 
       // If no daily data found, fall back to raw events
       if (!summary || summary.visits === 0) {
-        const rawResult = await db
+        // Get page views and unique visitors
+        const pageViewResult = await db
           .select({
             visits: sql<number>`COALESCE(COUNT(*), 0)`,
-            uniques: sql<number>`COALESCE(COUNT(DISTINCT ${analyticsEvents.visitorId}), 0)`,
-            gameStarts: sql<number>`COALESCE(COUNT(CASE WHEN ${analyticsEvents.eventType} = 'play_start' THEN 1 END), 0)`,
-            avgPlayMs: sql<number>`COALESCE(CEIL(AVG(CASE WHEN ${analyticsEvents.eventType} = 'play_end' THEN ${analyticsEvents.durationMs} END))::bigint, 0)`
+            uniques: sql<number>`COALESCE(COUNT(DISTINCT ${analyticsEvents.visitorId}), 0)`
           })
           .from(analyticsEvents)
           .where(
@@ -74,6 +73,7 @@ export class AnalyticsService {
             )
           );
 
+        // Get game starts count
         const gameStartsResult = await db
           .select({
             gameStarts: sql<number>`COALESCE(COUNT(*), 0)`
@@ -87,11 +87,25 @@ export class AnalyticsService {
             )
           );
 
+        // Get average play time from play_end events
+        const avgPlayResult = await db
+          .select({
+            avgPlayMs: sql<number>`COALESCE(CEIL(AVG(${analyticsEvents.durationMs}))::bigint, 0)`
+          })
+          .from(analyticsEvents)
+          .where(
+            and(
+              gte(analyticsEvents.ts, sql`${fromDate}::date`),
+              lte(analyticsEvents.ts, sql`(${toDate}::date + interval '1 day')`),
+              eq(analyticsEvents.eventType, 'play_end')
+            )
+          );
+
         summary = {
-          visits: rawResult[0]?.visits || 0,
-          uniques: rawResult[0]?.uniques || 0,
+          visits: pageViewResult[0]?.visits || 0,
+          uniques: pageViewResult[0]?.uniques || 0,
           gameStarts: gameStartsResult[0]?.gameStarts || 0,
-          avgPlayMs: rawResult[0]?.avgPlayMs || 0
+          avgPlayMs: avgPlayResult[0]?.avgPlayMs || 0
         };
       }
 

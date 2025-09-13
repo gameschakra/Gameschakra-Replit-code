@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { Button } from "@/components/ui/button";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
+import { useAuth } from "@/providers/AuthProvider";
+import { ToastAction } from "@/components/ui/toast";
 
 interface GameCardProps {
   game: Game;
@@ -16,11 +18,13 @@ interface GameCardProps {
 
 export default function GameCard({ game, isCompact = false, priority = false }: GameCardProps) {
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Check if game is favorited
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [`/api/favorites/is-favorite/${game.id}`],
-    enabled: false, // Don't auto-fetch, requires auth
+    enabled: isAuthenticated, // Only fetch if user is authenticated
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
@@ -30,16 +34,38 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
     e.preventDefault();
     e.stopPropagation();
     
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add games to your favorite list",
+        variant: "destructive",
+        action: (
+          <ToastAction 
+            altText="Login"
+            onClick={() => setLocation("/login")}
+          >
+            Login
+          </ToastAction>
+        )
+      });
+      return;
+    }
+    
     try {
-      const response = await apiRequest("POST", `/api/favorites/${game.id}`, {});
-      const result = await response.json();
+      const result = await apiRequest("POST", `/api/favorites/${game.id}`, {});
       
-      // Invalidate favorites query
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/favorites/is-favorite/${game.id}`] });
+      // Update the cache immediately for instant UI update
+      queryClient.setQueryData([`/api/favorites/is-favorite/${game.id}`], { 
+        isFavorite: result.isFavorite 
+      });
+      
+      // Invalidate and refetch favorites queries
+      await queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/favorites/is-favorite/${game.id}`] });
       
       toast({
-        title: result.message,
+        title: result.message || "Success",
         description: result.isFavorite ? "Game added to your favorites" : "Game removed from your favorites",
         variant: "default",
       });
@@ -47,7 +73,7 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
       console.error("Error toggling favorite:", error);
       toast({
         title: "Error",
-        description: "Please sign in to add favorites",
+        description: "Failed to update favorites. Please try again.",
         variant: "destructive",
       });
     }
@@ -90,8 +116,6 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
   // Use the improved thumbnail helper function for consistent thumbnail URLs
   const thumbnailSrc = getThumbnailSrc(game);
   console.log(`Game ${game.id} (${game.title}) using thumbnail: ${thumbnailSrc}`);
-
-  const [, setLocation] = useLocation();
 
   // Handle navigation with scrolling to top
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
@@ -154,8 +178,17 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
               {game.category?.name || "Game"}
             </span>
             <div className="flex items-center gap-1 text-amber-400">
-              <span className="material-icons text-sm">star</span>
-              <span className="text-xs text-slate-300/90">4.0</span>
+              {(() => {
+                // Generate varied ratings based on game ID
+                const ratings = [4.2, 4.5, 4.8, 4.0, 4.6, 4.3, 4.7, 4.9, 4.1, 4.4];
+                const rating = ratings[game.id % ratings.length];
+                return (
+                  <>
+                    <span className="material-icons text-sm">star</span>
+                    <span className="text-xs text-slate-300/90">{rating}</span>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -163,7 +196,7 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
       
       {/* Favorite button */}
       <button 
-        className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full ${isFavorite ? 'bg-white text-primary' : 'bg-white/80 text-gray-400 hover:text-primary'} transition-colors shadow-sm hover:shadow-md focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none`}
+        className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full ${isFavorite ? 'bg-white text-red-500' : 'bg-white/80 text-gray-400 hover:text-red-500'} transition-colors shadow-sm hover:shadow-md focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none`}
         onClick={toggleFavorite}
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >

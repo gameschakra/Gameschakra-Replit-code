@@ -73,7 +73,7 @@ export default function Header() {
       <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between h-16 max-w-full">
         {/* Logo */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center gap-2 min-w-0 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-md outline-none">
+          <Link href="/" className="flex items-center gap-2 min-w-0 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-md outline-none" onClick={() => navigate("/")}>
             {/* Compact Logo Mark */}
             <div className="h-6 w-6 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-md flex items-center justify-center shrink-0 shadow-md">
               <span className="material-icons text-black text-sm font-bold">sports_esports</span>
@@ -99,7 +99,7 @@ export default function Header() {
             <span className="relative z-10">Games</span>
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
-          <Link href="/?section=active-challenges" className="relative text-white hover:text-amber-500 transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none">
+          <Link href="/leaderboard" className="relative text-white hover:text-amber-500 transition-all duration-300 group focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded outline-none">
             <span className="relative z-10">Leaderboard</span>
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-yellow-400 group-hover:w-full transition-all duration-300"></div>
           </Link>
@@ -112,9 +112,47 @@ export default function Header() {
             <span className="material-icons mr-1 text-sm">code</span>
             Dev Portal
           </Link>
-          <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
-            <Link href="/login">Log In</Link>
-          </Button>
+          
+          {/* Auth Section - Show user dropdown if logged in, otherwise show login button */}
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
+                  <span className="material-icons mr-1 text-sm">person</span>
+                  {user.username || user.name}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  {user.isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <span className="material-icons mr-2 text-sm">dashboard</span>
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <span className="material-icons mr-2 text-sm">person</span>
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <span className="material-icons mr-2 text-sm">settings</span>
+                    Settings
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <span className="material-icons mr-2 text-sm">logout</span>
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
+              <Link href="/login">Log In</Link>
+            </Button>
+          )}
         </nav>
         
         {/* Mobile Actions */}
@@ -172,7 +210,10 @@ export default function Header() {
       >
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-800">
-            <Link href="/" className="flex items-center" onClick={() => setMobileMenuOpen(false)}>
+            <Link href="/" className="flex items-center" onClick={() => {
+              setMobileMenuOpen(false);
+              navigate("/");
+            }}>
               <span className="font-title font-bold text-xl text-white">GAMES<span className="text-amber-500">CHAKRA</span></span>
             </Link>
           </div>
@@ -195,11 +236,11 @@ export default function Header() {
                   color="violet"
                 />
               </Link>
-              <Link href="/?section=active-challenges" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/leaderboard" onClick={() => setMobileMenuOpen(false)}>
                 <SidebarItem 
                   icon={Trophy} 
-                  label="Challenges" 
-                  isActive={location.includes("section=active-challenges")}
+                  label="Leaderboard" 
+                  isActive={location === "/leaderboard"}
                   color="rose"
                 />
               </Link>
@@ -235,16 +276,54 @@ export default function Header() {
               />
             </Link>
 
-            <Link
-              href="/login"
-              className="block py-2 px-3 text-amber-500 hover:text-amber-400 transition-colors rounded-md bg-gray-800 mt-3"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <div className="flex items-center justify-center">
-                <span className="material-icons mr-2">login</span>
-                <span>Log In</span>
+            {/* Mobile Auth Section */}
+            {user ? (
+              <div className="mt-3 space-y-2">
+                <div className="py-2 px-3 text-amber-500 rounded-md bg-gray-800">
+                  <div className="flex items-center">
+                    <span className="material-icons mr-2">person</span>
+                    <span className="truncate">{user.username || user.name}</span>
+                  </div>
+                </div>
+                {user.isAdmin && (
+                  <button
+                    onClick={() => {
+                      navigate("/admin");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full py-2 px-3 text-purple-400 hover:text-purple-300 transition-colors rounded-md bg-gray-800/50 hover:bg-gray-700"
+                  >
+                    <div className="flex items-center justify-center">
+                      <span className="material-icons mr-2">dashboard</span>
+                      <span>Admin Dashboard</span>
+                    </div>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full py-2 px-3 text-red-400 hover:text-red-300 transition-colors rounded-md bg-gray-800/50 hover:bg-gray-700"
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="material-icons mr-2">logout</span>
+                    <span>Log Out</span>
+                  </div>
+                </button>
               </div>
-            </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="block py-2 px-3 text-amber-500 hover:text-amber-400 transition-colors rounded-md bg-gray-800 mt-3"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="flex items-center justify-center">
+                  <span className="material-icons mr-2">login</span>
+                  <span>Log In</span>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </div>

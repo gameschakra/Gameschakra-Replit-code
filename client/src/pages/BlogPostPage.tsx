@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRoute } from 'wouter';
 import { Helmet } from 'react-helmet';
 import { BlogPost } from '@/types';
-import PageLayout from '@/components/layout/PageLayout';
+// Removed PageLayout import - using global header/footer from App.tsx
 import Container from '@/components/ui/container';
 import BlogPostCard from '@/components/blog/BlogPostCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,7 +88,7 @@ const BlogPostPage: React.FC = () => {
   };
 
   return (
-    <PageLayout>
+    <>
       {post && (
         <Helmet>
           <title>{post.title} - GamesChakra Blog</title>
@@ -272,7 +272,7 @@ const BlogPostPage: React.FC = () => {
           </Container>
         </div>
       )}
-    </PageLayout>
+    </>
   );
 };
 

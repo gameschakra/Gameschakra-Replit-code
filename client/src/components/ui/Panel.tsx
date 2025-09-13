@@ -44,7 +44,7 @@ export default function Panel({
             tone={tone as any} 
             size="sm"
           />
-          <h2 className="text-[15px] font-semibold text-[var(--gc-text-1)]">
+          <h2 className="text-[16px] font-semibold text-[var(--gc-text-1)]">
             {title}
           </h2>
         </div>

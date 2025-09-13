@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
+import { ToastAction } from "@/components/ui/toast";
 
 interface GameCardMobileProps {
   game: Game;
@@ -15,11 +17,12 @@ interface GameCardMobileProps {
 export default function GameCardMobile({ game, priority = false }: GameCardMobileProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
   
   // Check if game is favorited
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [`/api/favorites/is-favorite/${game.id}`],
-    enabled: false, // Don't auto-fetch, requires auth
+    enabled: isAuthenticated, // Only fetch if user is authenticated
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
@@ -29,16 +32,38 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
     e.preventDefault();
     e.stopPropagation();
     
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add games to your favorite list",
+        variant: "destructive",
+        action: (
+          <ToastAction 
+            altText="Login"
+            onClick={() => setLocation("/login")}
+          >
+            Login
+          </ToastAction>
+        )
+      });
+      return;
+    }
+    
     try {
-      const response = await apiRequest("POST", `/api/favorites/${game.id}`, {});
-      const result = await response.json();
+      const result = await apiRequest("POST", `/api/favorites/${game.id}`, {});
       
-      // Invalidate favorites query
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/favorites/is-favorite/${game.id}`] });
+      // Update the cache immediately for instant UI update
+      queryClient.setQueryData([`/api/favorites/is-favorite/${game.id}`], { 
+        isFavorite: result.isFavorite 
+      });
+      
+      // Invalidate and refetch favorites queries
+      await queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/favorites/is-favorite/${game.id}`] });
       
       toast({
-        title: result.message,
+        title: result.message || "Success",
         description: result.isFavorite ? "Game added to your favorites" : "Game removed from your favorites",
         variant: "default",
       });
@@ -46,7 +71,7 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
       console.error("Error toggling favorite:", error);
       toast({
         title: "Error",
-        description: "Please sign in to add favorites",
+        description: "Failed to update favorites. Please try again.",
         variant: "destructive",
       });
     }
@@ -82,31 +107,33 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
           {/* Gradient overlay on hover/focus */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300" />
           
-          {/* Play Now button - slides up on hover/focus */}
-          <button 
-            className={cn(
-              "absolute left-3 right-3 bottom-3 h-6 rounded-full font-medium shadow-lg text-xs",
-              "bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-500 text-slate-900",
-              "transform translate-y-3 group-hover:translate-y-0 group-focus-within:translate-y-0",
-              "transition-transform duration-300 active:scale-95",
-              "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setLocation(`/games/${game.slug}`);
-            }}
-          >
-            Play Now
-          </button>
+          {/* Play button - overlay style */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300 flex items-center justify-center">
+            <button 
+              className={cn(
+                "bg-white/95 backdrop-blur-sm text-gray-900 px-4 py-1.5 rounded-full",
+                "font-semibold text-xs shadow-lg border border-white/20",
+                "hover:bg-white active:scale-95 transition-all duration-200",
+                "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setLocation(`/games/${game.slug}`);
+              }}
+            >
+              Play Now
+            </button>
+          </div>
           
           {/* Favorite button */}
           <button 
             className={cn(
               "absolute top-2 right-2 grid place-items-center w-9 h-9 rounded-full transition-all duration-200",
-              "bg-black/40 backdrop-blur border border-white/10 text-white/90",
+              "bg-black/40 backdrop-blur border border-white/10",
               "hover:bg-black/60 active:scale-95 touch-manipulation",
-              "focus-visible:ring-2 focus-visible:ring-[var(--gc-accent)]/50 focus-visible:outline-none"
+              "focus-visible:ring-2 focus-visible:ring-[var(--gc-accent)]/50 focus-visible:outline-none",
+              isFavorite ? "text-red-500" : "text-white/90"
             )}
             onClick={toggleFavorite}
             aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
@@ -133,8 +160,19 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
         <div className="flex items-center justify-between text-[12px] text-[var(--gc-mute)]">
           <span>{game.category?.name || 'Game'}</span>
           <div className="flex items-center gap-1">
-            <span className="text-[var(--gc-warn)]">★★★★☆</span>
-            <span className="text-[var(--gc-text-2)] font-medium">4.0</span>
+            {(() => {
+              // Generate varied ratings based on game ID
+              const ratings = [4.2, 4.5, 4.8, 4.0, 4.6, 4.3, 4.7, 4.9, 4.1, 4.4];
+              const rating = ratings[game.id % ratings.length];
+              const stars = Math.round(rating);
+              const starDisplay = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+              return (
+                <>
+                  <span className="text-[var(--gc-warn)]">{starDisplay}</span>
+                  <span className="text-[var(--gc-text-2)] font-medium">{rating}</span>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>

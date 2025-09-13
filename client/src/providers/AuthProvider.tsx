@@ -6,20 +6,27 @@ import { useToast } from '@/hooks/use-toast';
 // Define types
 type User = {
   id: number;
-  username: string;
   email: string;
-  isAdmin: boolean;
+  name: string;
+  username: string;
+  phone?: string;
+  city?: string;
+  country?: string;
   avatarUrl?: string;
-  createdAt?: string;
+  isAdmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+  password?: string | null;
 };
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<User>;
+  register: (email: string, password: string, name: string, phone: string, username: string, city?: string, country?: string) => Promise<User>;
+  updateUser: (data: Partial<Pick<User, 'name' | 'phone' | 'city' | 'country'>>) => Promise<User>;
 };
 
 // Create context
@@ -32,19 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   // Get current user query
   const {
-    data: user,
+    data: response,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['/api/auth/user', lastAuthCheck],
+    queryKey: ['/api/auth/me', lastAuthCheck],
     queryFn: async () => {
       try {
-        const user = await apiRequest('GET', '/api/auth/user', null);
-        console.log('Auth provider user data:', user);
-        return user;
+        const response = await apiRequest('GET', '/api/auth/me', null);
+        console.log('Auth provider user data:', response);
+        return response;
       } catch (error) {
         console.log('Auth provider user fetch error:', error);
-        return null;
+        return { user: null };
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -52,18 +59,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false, // Don't retry auth requests
   });
 
+  const user = response?.user || null;
+
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      console.log('Login attempt with:', { username, password: '******' });
-      const response = await apiRequest('POST', '/api/auth/login', { username, password });
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      console.log('Login attempt with:', { email, password: '******' });
+      const response = await apiRequest('POST', '/api/auth/login', { email, password });
       console.log('Login response:', response);
-      return response;
+      return response.user;
     },
     onSuccess: () => {
       // Refetch user data
       setLastAuthCheck(new Date());
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
     },
     onError: (error: Error) => {
       console.error('Login error:', error);
@@ -83,8 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       // Clear user data
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      
+      // Clear all favorites-related queries completely
+      queryClient.removeQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey as string[];
+          return queryKey.some(key => 
+            typeof key === 'string' && 
+            (key.includes('/api/favorites') || key.includes('favorites'))
+          );
+        }
+      });
+      
+      // Also clear any recently played or user-specific data
+      queryClient.removeQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey as string[];
+          return queryKey.some(key => 
+            typeof key === 'string' && 
+            (key.includes('/api/recently-played') || key.includes('recently-played'))
+          );
+        }
+      });
+      
+      // Force a re-render by updating auth check timestamp
       setLastAuthCheck(new Date());
+      
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out',
@@ -103,25 +137,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async ({
-      username,
       email,
       password,
+      name,
+      phone,
+      username,
+      city,
+      country,
     }: {
-      username: string;
       email: string;
       password: string;
+      name: string;
+      phone: string;
+      username: string;
+      city?: string;
+      country?: string;
     }) => {
       const response = await apiRequest('POST', '/api/auth/register', {
-        username,
         email,
         password,
+        name,
+        phone,
+        username,
+        city,
+        country,
       });
-      return response;
+      return response.user;
     },
     onSuccess: () => {
       // Refetch user data
       setLastAuthCheck(new Date());
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       toast({
         title: 'Registration successful',
         description: 'Your account has been created',
@@ -138,10 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   // Auth methods
-  const login = async (username: string, password: string): Promise<User> => {
-    console.log('AuthProvider.login called with username:', username);
+  const login = async (email: string, password: string): Promise<User> => {
+    console.log('AuthProvider.login called with email:', email);
     try {
-      const user = await loginMutation.mutateAsync({ username, password });
+      const user = await loginMutation.mutateAsync({ email, password });
       console.log('Login successful, user:', user);
       return user;
     } catch (error) {
@@ -154,12 +200,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutMutation.mutateAsync();
   };
 
-  const register = async (username: string, email: string, password: string): Promise<User> => {
+  const register = async (email: string, password: string, name: string, phone: string, username: string, city?: string, country?: string): Promise<User> => {
     try {
-      const user = await registerMutation.mutateAsync({ username, email, password });
+      const user = await registerMutation.mutateAsync({ email, password, name, phone, username, city, country });
       return user;
     } catch (error) {
       console.error('Registration error in AuthProvider:', error);
+      throw error;
+    }
+  };
+
+  const updateUser = async (data: Partial<Pick<User, 'name' | 'phone' | 'city' | 'country'>>): Promise<User> => {
+    try {
+      const response = await apiRequest('PUT', '/api/auth/profile', data);
+      // Refresh user data
+      setLastAuthCheck(new Date());
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      return response.user;
+    } catch (error: any) {
+      console.error('Update user error in AuthProvider:', error);
       throw error;
     }
   };
@@ -185,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         register,
+        updateUser,
       }}
     >
       {children}

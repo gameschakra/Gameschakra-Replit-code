@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import EditGameModal from "@/components/admin/EditGameModal";
 import AdminCategoriesList from "@/components/admin/AdminCategoriesList";
+import UserManagement from "@/pages/admin/UserManagement";
 import {
   Table,
   TableBody,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/providers/AuthProvider";
 // Temporarily disabled ErrorBoundary while fixing JSX structure
 // import ErrorBoundary, { DashboardErrorFallback } from "@/components/ui/error-boundary";
 
@@ -44,7 +46,8 @@ export default function Dashboard() {
   const [location] = useLocation();
   const activeTabFromUrl = location.includes("/admin/categories") ? "categories" : 
                           location.includes("/admin/challenges") ? "challenges" : 
-                          location.includes("/admin/blog") ? "blog" : "games";
+                          location.includes("/admin/blog") ? "blog" :
+                          location.includes("/admin/users") ? "users" : "games";
   
   const [activeTab, setActiveTab] = useState(activeTabFromUrl);
   const [gameFile, setGameFile] = useState<File | null>(null);
@@ -56,11 +59,9 @@ export default function Dashboard() {
   const [editGameId, setEditGameId] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const { toast } = useToast();
-
-  // Get user info to check if admin
-  const { data: user, isLoading: userLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
-  });
+  
+  // Get user info from AuthProvider
+  const { user, isLoading: userLoading } = useAuth();
 
   // Get all games for management
   const { data: games, isLoading: gamesLoading } = useQuery<Game[]>({
@@ -126,6 +127,42 @@ export default function Dashboard() {
       toast({
         title: "Success",
         description: `Game ${data.status === "published" ? "published" : "unpublished"} successfully`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Toggle game featured status mutation
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async ({ id, isFeatured }: { id: number; isFeatured: boolean }) => {
+      // Use PATCH method to update just the isFeatured field
+      const formData = new FormData();
+      formData.append("isFeatured", String(isFeatured));
+      
+      const response = await fetch(`/api/games/${id}`, {
+        method: 'PATCH',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update featured status');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      toast({
+        title: "Success",
+        description: `Game ${data.isFeatured ? "featured" : "unfeatured"} successfully`,
       });
     },
     onError: (error: Error) => {
@@ -414,8 +451,13 @@ export default function Dashboard() {
             <TabsTrigger value="categories">Manage Categories</TabsTrigger>
             <TabsTrigger value="challenges">Manage Challenges</TabsTrigger>
             <TabsTrigger value="blog">Manage Blog</TabsTrigger>
-            <TabsTrigger value="analytics">
-              <Link href="/admin/analytics" className="inline-block w-full">Analytics</Link>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger 
+              value="analytics"
+              onClick={() => window.open('/admin/analytics', '_blank')}
+              className="cursor-pointer"
+            >
+              Analytics
             </TabsTrigger>
           </TabsList>
           
@@ -509,11 +551,12 @@ export default function Dashboard() {
                 
                 <div className="flex items-center space-x-6 mb-4">
                   <div className="flex items-center">
-                    <Input
+                    <input
                       id="isFeatured"
                       name="isFeatured"
                       type="checkbox"
-                      className="w-4 h-4 bg-[#1A2134] border-[#2d3754]"
+                      value="true"
+                      className="w-4 h-4 bg-[#1A2134] border-[#2d3754] rounded focus:ring-2 focus:ring-amber-500"
                     />
                     <label htmlFor="isFeatured" className="ml-2 text-sm font-medium text-gray-300">
                       Featured Game
@@ -564,6 +607,7 @@ export default function Dashboard() {
                         <TableHead className="text-gray-300">Title</TableHead>
                         <TableHead className="text-gray-300">Category</TableHead>
                         <TableHead className="text-gray-300">Status</TableHead>
+                        <TableHead className="text-gray-300">Featured</TableHead>
                         <TableHead className="text-gray-300">Play Count</TableHead>
                         <TableHead className="text-right text-gray-300">Actions</TableHead>
                       </TableRow>
@@ -584,6 +628,23 @@ export default function Dashboard() {
                             >
                               {game.status}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant={game.isFeatured ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                toggleFeaturedMutation.mutate({ 
+                                  id: game.id, 
+                                  isFeatured: !game.isFeatured
+                                });
+                              }}
+                              className={`${game.isFeatured 
+                                ? "bg-amber-500/30 hover:bg-amber-500/50 text-amber-300" 
+                                : "border-[#2d3754] hover:bg-[#2d3754] text-gray-300"}`}
+                            >
+                              {game.isFeatured ? "⭐ Featured" : "☆ Feature"}
+                            </Button>
                           </TableCell>
                           <TableCell>{game.playCount}</TableCell>
                           <TableCell className="text-right">
@@ -1021,53 +1082,12 @@ export default function Dashboard() {
                 </Table>
               </div>
             </div>
-                      </TabsContent>
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-8">
+            <UserManagement />
+          </TabsContent>
           
-          <TabsContent value="blog" className="space-y-8">
-                        {/* Add New Blog Post Form */}
-            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
-              <h2 className="text-xl font-title font-bold mb-4 text-white">Create New Blog Post</h2>
-              <Button variant="default" className="bg-primary hover:bg-primary/90" asChild>
-                <Link href="/admin/blog/create">Create New Post</Link>
-              </Button>
-            </div>
-            
-            {/* Blog Posts List */}
-            <div className="bg-[#232a40] p-6 rounded-xl border border-[#2d3754] shadow-md">
-              <h2 className="text-xl font-title font-bold mb-4 text-white">Blog Posts</h2>
-              <div className="flex justify-between items-center mb-6">
-                <Button variant="outline" className="border-[#2d3754] hover:bg-[#2d3754] text-white" asChild>
-                  <Link href="/blog">View Blog</Link>
-                </Button>
-                <Button variant="default" className="bg-primary hover:bg-primary/90" asChild>
-                  <Link href="/admin/blog/categories">Manage Categories</Link>
-                </Button>
-              </div>
-              
-              {/* Blog posts table would go here */}
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-[#1A2134]">
-                    <TableRow>
-                      <TableHead className="text-gray-300">Title</TableHead>
-                      <TableHead className="text-gray-300">Category</TableHead>
-                      <TableHead className="text-gray-300">Status</TableHead>
-                      <TableHead className="text-gray-300">Published Date</TableHead>
-                      <TableHead className="text-right text-gray-300">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* We'll add the dynamic blog posts data fetching in the next iteration */}
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4 text-gray-400">
-                        Loading blog posts...
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-                      </TabsContent>
         </Tabs>
       </div>
       
