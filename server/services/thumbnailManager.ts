@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { log, warn, error } from "../logger";
 
 // Define the mapping structure
 interface ThumbnailMappings {
@@ -27,13 +28,29 @@ let thumbnailMappings: ThumbnailMappings;
 try {
   const mappingsPath = path.join(process.cwd(), 'public', 'images', 'games', 'thumbnailMappings.json');
   const mappingsData = fs.readFileSync(mappingsPath, 'utf8');
-  
+
   // Get the parsed mapping data
-  thumbnailMappings = JSON.parse(mappingsData);
+  const parsedData = JSON.parse(mappingsData);
+  if (!parsedData || typeof parsedData !== 'object') {
+    throw new Error('Invalid mapping data format');
+  }
+  thumbnailMappings = parsedData;
   
-  // Initialize directMapping if it doesn't exist
-  if (!thumbnailMappings.directMapping) {
+  // Initialize all required properties with safe defaults
+  if (!thumbnailMappings.idMappings || typeof thumbnailMappings.idMappings !== 'object') {
+    thumbnailMappings.idMappings = {};
+  }
+  if (!thumbnailMappings.nameMappings || typeof thumbnailMappings.nameMappings !== 'object') {
+    thumbnailMappings.nameMappings = {};
+  }
+  if (!thumbnailMappings.directMapping || typeof thumbnailMappings.directMapping !== 'object') {
     thumbnailMappings.directMapping = {};
+  }
+  if (!Array.isArray(thumbnailMappings.availableFiles)) {
+    thumbnailMappings.availableFiles = [];
+  }
+  if (!thumbnailMappings.defaultThumbnail) {
+    thumbnailMappings.defaultThumbnail = DEFAULT_THUMBNAIL;
   }
   
   // Load actual files from the directory to ensure we're using real files
@@ -65,9 +82,9 @@ try {
     }
   }
   
-  console.log(`Successfully loaded thumbnail mappings with ${actualFiles.length} available image files`);
-} catch (error) {
-  console.error("Error loading thumbnail mappings, using defaults:", error);
+  log(`Successfully loaded thumbnail mappings with ${actualFiles.length} available image files`);
+} catch (err) {
+  warn("Error loading thumbnail mappings, using defaults:", err);
   thumbnailMappings = DEFAULT_MAPPINGS;
 }
 
@@ -86,7 +103,7 @@ export function getGameThumbnail(
   // First check the direct mapping for game ID patterns
   if (gameId !== null && gameId !== undefined) {
     const gameKey = `game_${gameId}`;
-    if (gameKey in thumbnailMappings.directMapping) {
+    if (thumbnailMappings.directMapping && gameKey in thumbnailMappings.directMapping) {
       return thumbnailMappings.directMapping[gameKey];
     }
   }
@@ -94,14 +111,14 @@ export function getGameThumbnail(
   // Strategy 1: Match by game ID from ID mappings
   if (gameId !== null && gameId !== undefined) {
     const idStr = gameId.toString();
-    if (idStr in thumbnailMappings.idMappings) {
+    if (thumbnailMappings.idMappings && idStr in thumbnailMappings.idMappings) {
       return thumbnailMappings.idMappings[idStr];
     }
   }
   
   // Strategy 2: Match by game name
   if (gameName !== null && gameName !== undefined && gameName.length > 0) {
-    if (gameName in thumbnailMappings.nameMappings) {
+    if (thumbnailMappings.nameMappings && gameName in thumbnailMappings.nameMappings) {
       return thumbnailMappings.nameMappings[gameName];
     }
   }
@@ -110,7 +127,7 @@ export function getGameThumbnail(
   if (requestedFile !== null && requestedFile !== undefined) {
     // Extract just the filename without path or query params
     const filename = path.basename(requestedFile.split('?')[0]);
-    if (thumbnailMappings.availableFiles.includes(filename)) {
+    if (thumbnailMappings.availableFiles && thumbnailMappings.availableFiles.includes(filename)) {
       return filename;
     }
     
@@ -119,7 +136,7 @@ export function getGameThumbnail(
     if (gameIdMatch && gameIdMatch[1]) {
       const extractedId = gameIdMatch[1];
       const directKey = `game_${extractedId}`;
-      if (directKey in thumbnailMappings.directMapping) {
+      if (thumbnailMappings.directMapping && directKey in thumbnailMappings.directMapping) {
         return thumbnailMappings.directMapping[directKey];
       }
     }
@@ -129,8 +146,10 @@ export function getGameThumbnail(
     if (placeholderMatch && placeholderMatch[1]) {
       const extractedId = parseInt(placeholderMatch[1]);
       // Use modulo to get a deterministic image based on ID
-      const imageIndex = extractedId % thumbnailMappings.availableFiles.length;
-      return thumbnailMappings.availableFiles[imageIndex];
+      if (thumbnailMappings.availableFiles && thumbnailMappings.availableFiles.length > 0) {
+        const imageIndex = extractedId % thumbnailMappings.availableFiles.length;
+        return thumbnailMappings.availableFiles[imageIndex];
+      }
     }
   }
   
@@ -138,13 +157,15 @@ export function getGameThumbnail(
   if (gameId !== null && gameId !== undefined) {
     const numericId = typeof gameId === 'string' ? parseInt(gameId) : gameId;
     if (!isNaN(numericId)) {
-      const imageIndex = numericId % thumbnailMappings.availableFiles.length;
-      return thumbnailMappings.availableFiles[imageIndex];
+      if (thumbnailMappings.availableFiles && thumbnailMappings.availableFiles.length > 0) {
+        const imageIndex = numericId % thumbnailMappings.availableFiles.length;
+        return thumbnailMappings.availableFiles[imageIndex];
+      }
     }
   }
   
   // Ultimate fallback to default thumbnail
-  return thumbnailMappings.defaultThumbnail;
+  return thumbnailMappings.defaultThumbnail || DEFAULT_THUMBNAIL;
 }
 
 /**
@@ -157,20 +178,23 @@ export function getThumbnailPath(filename: string): string {
   const baseFilename = path.basename(filename);
   
   // First try exact file match
-  if (thumbnailMappings.availableFiles.includes(baseFilename)) {
+  if (thumbnailMappings.availableFiles && thumbnailMappings.availableFiles.includes(baseFilename)) {
     return path.join(process.cwd(), 'public', 'images', 'games', baseFilename);
   }
   
   // If we have a hash mapping for this filename, use that
-  for (const [hash, mappedFile] of Object.entries(thumbnailMappings.idMappings)) {
-    if (mappedFile === baseFilename && thumbnailMappings.availableFiles.includes(mappedFile)) {
-      return path.join(process.cwd(), 'public', 'images', 'games', mappedFile);
+  if (thumbnailMappings.idMappings && typeof thumbnailMappings.idMappings === 'object') {
+    for (const [hash, mappedFile] of Object.entries(thumbnailMappings.idMappings)) {
+      if (mappedFile === baseFilename && thumbnailMappings.availableFiles && thumbnailMappings.availableFiles.includes(mappedFile)) {
+        return path.join(process.cwd(), 'public', 'images', 'games', mappedFile);
+      }
     }
   }
   
   // If nothing matches, use default
-  console.log(`Thumbnail ${baseFilename} not found, using default thumbnail ${thumbnailMappings.defaultThumbnail}`);
-  return path.join(process.cwd(), 'public', 'images', 'games', thumbnailMappings.defaultThumbnail);
+  const defaultThumb = thumbnailMappings.defaultThumbnail || DEFAULT_THUMBNAIL;
+  warn(`Thumbnail ${baseFilename} not found, using default thumbnail ${defaultThumb}`);
+  return path.join(process.cwd(), 'public', 'images', 'games', defaultThumb);
 }
 
 /**

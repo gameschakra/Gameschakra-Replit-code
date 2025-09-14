@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../db';
 import { users, accounts, type User, type Account } from '../../shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { log, warn, error } from '../logger';
 
 // Configure passport serialization
 passport.serializeUser((user: User, done) => {
@@ -70,17 +71,17 @@ passport.use(new LocalStrategy(
 ));
 
 // Google OAuth Strategy - register strategy with proper error handling
-try {
-  if (process.env.GOOGLE_CLIENT_ID && 
-      process.env.GOOGLE_CLIENT_SECRET && 
-      process.env.GOOGLE_CLIENT_ID !== 'temp-disabled' && 
-      !process.env.GOOGLE_CLIENT_ID.includes('your-google')) {
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
+  warn('Google OAuth disabled: missing env');
+} else {
+  try {
     
     passport.use(new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || (process.env.NODE_ENV === 'production' ? 'https://gameschakra.com/api/auth/google/callback' : 'http://localhost:3000/api/auth/google/callback')
+        callbackURL: GOOGLE_CALLBACK_URL
       },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -154,29 +155,30 @@ try {
 
         return done(null, existingUser);
       } catch (error) {
-        console.error('Google OAuth strategy error:', error);
+        error('Google OAuth strategy error:', error);
         return done(error, null);
       }
     }
     ));
     
-    console.log('✅ Google OAuth strategy registered successfully');
-  } else {
-    console.warn('⚠️  Google OAuth not configured - missing or invalid GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET');
+    log('✅ Google OAuth strategy registered successfully');
+  } catch (err) {
+    error('❌ Failed to register Google OAuth strategy:', err);
   }
-} catch (error) {
-  console.error('❌ Failed to register Google OAuth strategy:', error);
 }
 
 // Apple OAuth Strategy
-if (process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY) {
+const { APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_CALLBACK_URL } = process.env;
+if (!APPLE_CLIENT_ID || !APPLE_TEAM_ID || !APPLE_KEY_ID || !APPLE_PRIVATE_KEY) {
+  warn('Apple OAuth disabled: missing env');
+} else {
   passport.use(new AppleStrategy(
     {
-      clientID: process.env.APPLE_CLIENT_ID,
-      teamID: process.env.APPLE_TEAM_ID,
-      keyID: process.env.APPLE_KEY_ID,
-      privateKeyString: process.env.APPLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      callbackURL: process.env.APPLE_CALLBACK_URL || (process.env.NODE_ENV === 'production' ? 'https://gameschakra.com/api/auth/apple/callback' : '/api/auth/apple/callback'),
+      clientID: APPLE_CLIENT_ID,
+      teamID: APPLE_TEAM_ID,
+      keyID: APPLE_KEY_ID,
+      privateKeyString: APPLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      callbackURL: APPLE_CALLBACK_URL || '/api/auth/apple/callback',
       scope: ['name', 'email'],
       passReqToCallback: false
     },
@@ -254,6 +256,7 @@ if (process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPL
       }
     }
   ));
+  log('✅ Apple OAuth strategy registered successfully');
 }
 
 export default passport;

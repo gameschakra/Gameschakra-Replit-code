@@ -42,78 +42,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: express.Express): Promise<Server> {
-  // Health check endpoint (before other middleware)
-  app.get('/api/health', async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    
-    // Basic health info
-    const healthCheck = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      version: process.env.npm_package_version || '1.0.0',
-      port: process.env.PORT || '3000',
-      database: { status: 'unknown', responseTime: 0 },
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
-      },
-      disk: {
-        uploads: 'unknown',
-        migrations: 'unknown'
-      }
-    };
-
-    // Test database connection
-    try {
-      const dbStart = Date.now();
-      await storage.getCategories(); // Simple query to test DB
-      healthCheck.database = {
-        status: 'connected',
-        responseTime: Date.now() - dbStart
-      };
-    } catch (error) {
-      healthCheck.database = {
-        status: 'disconnected',
-        responseTime: Date.now() - startTime,
-        error: error.message
-      };
-      healthCheck.status = 'unhealthy';
-    }
-
-    // Check file system
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      
-      // Check uploads directory
-      try {
-        await fs.access('uploads');
-        healthCheck.disk.uploads = 'accessible';
-      } catch {
-        healthCheck.disk.uploads = 'inaccessible';
-      }
-      
-      // Check migrations directory
-      try {
-        await fs.access('migrations/meta/_journal.json');
-        healthCheck.disk.migrations = 'found';
-      } catch {
-        healthCheck.disk.migrations = 'missing';
-        if (healthCheck.status === 'healthy') {
-          healthCheck.status = 'degraded';
-        }
-      }
-    } catch (error) {
-      healthCheck.disk = { error: 'filesystem_check_failed' };
-    }
-
-    // Set appropriate status code
-    const statusCode = healthCheck.status === 'healthy' ? 200 : 
-                      healthCheck.status === 'degraded' ? 200 : 503;
-    
-    res.status(statusCode).json(healthCheck);
+  // Zero-dependency health check endpoint (before other middleware)
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({ status: 'healthy', ts: Date.now() });
   });
 
   // Configure CORS headers for all requests - dev-safe, prod-safe
@@ -1008,12 +939,39 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     try {
       const gameId = Number(req.params.id);
       const userId = (req.user as any)?.id;
-      
+
       await gameService.trackGamePlay(gameId, userId);
-      
+
       res.json({ message: "Play recorded successfully" });
     } catch (error) {
       res.status(500).json({ message: `Error recording play: ${error.message}` });
+    }
+  });
+
+  // Game play redirect by slug
+  app.get('/play/:slug', async (req: Request, res: Response) => {
+    try {
+      const game = await storage.getGameBySlug(req.params.slug);
+      if (!game || !game.gameDir) {
+        return res.status(404).json({ message: 'Game not found' });
+      }
+      const gameUrl = `/games/${game.gameDir}/${game.entryFile || 'index.html'}`;
+      res.redirect(302, gameUrl);
+    } catch (error) {
+      res.status(500).json({ message: `Error loading game: ${error.message}` });
+    }
+  });
+
+  // API endpoint to get game bundle path by slug
+  api.get('/games/:slug/bundle', async (req: Request, res: Response) => {
+    try {
+      const game = await storage.getGameBySlug(req.params.slug);
+      if (!game || !game.gameDir) {
+        return res.status(404).json({ message: 'Game not found' });
+      }
+      res.json({ bundlePath: game.gameDir, entryFile: game.entryFile || 'index.html' });
+    } catch (error) {
+      res.status(500).json({ message: `Error getting game bundle: ${error.message}` });
     }
   });
 

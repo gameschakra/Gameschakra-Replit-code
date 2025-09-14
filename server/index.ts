@@ -27,6 +27,7 @@ import * as cron from 'node-cron';
 import { AnalyticsService } from './services/analyticsService';
 import path from "path";
 import * as fileService from "./services/fileService";
+import { log, warn, error } from "./logger";
 
 const app = express();
 
@@ -180,35 +181,55 @@ app.use((req, res, next) => {
   });
 
   // Setup static serving or dev middleware based on environment
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV !== "production") {
     // Only import vite in development
     try {
-      const { setupVite } = await import("./vite");
-      await setupVite(app, server);
-      console.log('🔧 Vite development middleware enabled');
-    } catch (error) {
-      console.error('❌ Failed to setup Vite dev middleware:', error);
+      const { attachVite } = await import("./vite.js");
+      await attachVite(app);
+      log('🔧 Vite development middleware enabled');
+    } catch (err) {
+      error('❌ Failed to setup Vite dev middleware:', err);
       process.exit(1);
     }
   } else {
-    // Production static file serving
-    const { serveStatic } = await import("./vite");
-    serveStatic(app);
-    console.log('📦 Production static file serving enabled');
+    // Production static file serving - NO vite imports
+    const root = process.cwd();
+
+    // Mount uploads explicitly
+    app.use('/images/games', express.static(path.join(root, 'uploads', 'thumbnails'), {
+      fallthrough: true,
+      maxAge: '7d',
+      setHeaders(res) { res.setHeader('Cache-Control', 'public, max-age=604800, immutable'); }
+    }));
+
+    app.use('/games', express.static(path.join(root, 'uploads', 'games'), {
+      fallthrough: true,
+      setHeaders(res) { res.setHeader('Cross-Origin-Opener-Policy', 'same-origin'); }
+    }));
+
+    // Serve built client
+    app.use(express.static(path.join(root, 'dist', 'public'), { maxAge: '7d' }));
+
+    // SPA fallback
+    app.use('*', (_req, res) => {
+      res.sendFile(path.join(root, 'dist', 'public', 'index.html'));
+    });
+
+    log('📦 Production static file serving enabled');
   }
 
   // Serve the app on the configured port and host
-  const port = parseInt(process.env.PORT || '3000');
+  const port = parseInt(process.env.PORT || '5000');
   const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
   
   server.listen(port, host, () => {
-    console.log(`🚀 GameHub Pro serving on ${host}:${port}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
-    console.log(`🔐 Trust Proxy: ${process.env.TRUST_PROXY === 'true' ? 'Enabled' : 'Disabled'}`);
-    console.log(`🍪 Cookie Domain: ${process.env.COOKIE_DOMAIN || 'default'}`);
-    console.log(`🌐 CORS Origins: ${process.env.CORS_ORIGIN || 'development defaults'}`);
-    console.log(`🔑 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
+    log(`🚀 GameHub Pro serving on ${host}:${port}`);
+    log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    log(`🔐 Trust Proxy: ${process.env.TRUST_PROXY === 'true' ? 'Enabled' : 'Disabled'}`);
+    log(`🍪 Cookie Domain: ${process.env.COOKIE_DOMAIN || 'default'}`);
+    log(`🌐 CORS Origins: ${process.env.CORS_ORIGIN || 'development defaults'}`);
+    log(`🔑 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
     
     // Generate sitemap on server start and schedule regeneration
     const sitemapInterval = scheduleSitemapGeneration();
@@ -233,7 +254,7 @@ app.use((req, res, next) => {
         
         log('✅ Nightly analytics aggregation completed');
       } catch (error) {
-        console.error('❌ Analytics aggregation failed:', error);
+        error('❌ Analytics aggregation failed:', error);
       }
     }, {
       scheduled: true,
