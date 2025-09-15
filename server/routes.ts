@@ -83,12 +83,11 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
 
   // Configure session with proper production/development settings
   const isProd = process.env.NODE_ENV === 'production';
-  const trustProxy = process.env.TRUST_PROXY === 'true';
-  const secureCookies = process.env.SECURE_COOKIES === 'true' || isProd;
-  const sameSiteCookies = process.env.SAME_SITE_COOKIES || (isProd ? 'none' : 'lax');
-  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || '.gameschakra.com') : undefined;
+  const secureCookies = isProd; // Always secure in production (behind HTTPS)
+  const sameSiteCookies = 'lax'; // Use 'lax' for same domain
+  const cookieDomain = isProd ? 'gameschakra.com' : undefined; // No subdomain prefix for main domain
   
-  console.log(`🍪 Session config: secure=${secureCookies}, sameSite=${sameSiteCookies}, domain=${cookieDomain || 'default'}, trustProxy=${trustProxy}`);
+  console.log(`🍪 Session config: secure=${secureCookies}, sameSite=${sameSiteCookies}, domain=${cookieDomain || 'default'}, trustProxy=true`);
   
   const sessionMiddleware = session({
     name: 'gc_sid',
@@ -104,7 +103,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days
     },
     rolling: true,
-    proxy: trustProxy,
+    proxy: true, // Always true since we're behind Nginx
     genid: () => crypto.randomUUID()
   });
   
@@ -940,11 +939,16 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       const gameId = Number(req.params.id);
       const userId = (req.user as any)?.id;
 
-      await gameService.trackGamePlay(gameId, userId);
+      // Best-effort tracking (don't block if it fails)
+      try {
+        await gameService.trackGamePlay(gameId, userId);
+      } catch (trackError) {
+        console.warn('Play tracking failed:', trackError);
+      }
 
-      res.json({ message: "Play recorded successfully" });
+      res.json({ ok: true });
     } catch (error) {
-      res.status(500).json({ message: `Error recording play: ${error.message}` });
+      res.status(500).json({ ok: false, error: error.message });
     }
   });
 
@@ -1019,13 +1023,18 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
-  api.get("/favorites/is-favorite/:gameId", isAuthenticated, async (req: Request, res: Response) => {
+  api.get("/favorites/is-favorite/:gameId", async (req: Request, res: Response) => {
     try {
+      // If not authenticated, silently return false instead of 401
+      if (!req.isAuthenticated() || !req.user) {
+        return res.json({ isFavorite: false });
+      }
+
       const userId = (req.user as any)?.id;
       const gameId = Number(req.params.gameId);
-      
+
       const isFavorite = await storage.isGameFavorite(userId, gameId);
-      
+
       res.json({ isFavorite });
     } catch (error) {
       res.status(500).json({ message: `Error checking favorite status: ${error.message}` });
@@ -1278,6 +1287,11 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   setupBlogRoutes(api);
   
   app.use("/api", api);
+
+  // Return JSON for unknown API routes (avoid HTML fallback)
+  app.use('/api', (req: Request, res: Response) => {
+    res.status(404).json({ error: 'API endpoint not found' });
+  });
 
   // GC_SEO: Serve dynamic sitemap.xml with proper headers and caching
   app.get('/sitemap.xml', async (req: Request, res: Response) => {

@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { favorites } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,8 +72,10 @@ export default function GameDetailsPage() {
   // Fetch user favorites status
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [game ? `/api/favorites/is-favorite/${game.id}` : null],
+    queryFn: () => game ? favorites.isFavorite(game.id) : Promise.resolve({ isFavorite: false }),
     enabled: !!game,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false, // Don't retry since our API handles errors gracefully
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
@@ -138,14 +141,33 @@ export default function GameDetailsPage() {
     };
   }, [game]);
 
-  // Handle play game - track analytics and enable fullscreen on mobile
+  // Handle play game - navigate immediately and track in background
   const handlePlayGame = async () => {
     if (!game) return;
-    
-    // Record play count
+
+    // Navigate immediately to game
+    if (game.gameDir) {
+      window.location.href = `/games/${game.gameDir}/index.html`;
+    }
+
+    // Track play in background (best effort, don't block navigation)
     try {
-      await apiRequest("POST", `/api/games/${game.id}/play`, {});
-      
+      // Use sendBeacon for better reliability during navigation
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(
+          `/api/games/${game.id}/play`,
+          new Blob([JSON.stringify({})], { type: 'application/json' })
+        );
+      } else {
+        // Fallback to fetch with no-wait
+        fetch(`/api/games/${game.id}/play`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+          credentials: 'include'
+        }).catch(() => {}); // Ignore errors
+      }
+
       // Add to recently played (works for both logged in and non-logged users)
       addRecentGame({
         gameId: game.id,
@@ -154,19 +176,9 @@ export default function GameDetailsPage() {
         gameThumbnail: game.thumbnailUrl || '',
         categoryName: game.category?.name,
       });
-      
-      setShowPlayButton(false);
-      
-      // If on mobile, automatically go to overlay fullscreen after a short delay
-      if (isMobile && gameFrameRef.current) {
-        // Small delay to ensure iframe is loaded
-        setTimeout(() => {
-          setOverlayFs(true);      // Use overlay instead of requestFullscreen()
-          setIsFullscreen(true);
-        }, 300);
-      }
     } catch (error) {
-      console.error("Error recording play:", error);
+      // Ignore tracking errors - don't block navigation
+      console.warn("Play tracking failed:", error);
     }
   };
 

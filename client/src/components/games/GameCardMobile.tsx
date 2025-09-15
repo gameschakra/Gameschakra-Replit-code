@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Game } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { favorites } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getThumbnailSrc } from "@/lib/getThumbnailSrc";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { ToastAction } from "@/components/ui/toast";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface GameCardMobileProps {
   game: Game;
@@ -22,7 +24,9 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
   // Check if game is favorited
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [`/api/favorites/is-favorite/${game.id}`],
-    enabled: isAuthenticated, // Only fetch if user is authenticated
+    queryFn: () => favorites.isFavorite(game.id), // Use our custom API that handles 401 silently
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry since our API handles errors gracefully
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
@@ -97,11 +101,13 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
       <Link href={`/games/${game.slug}`} onClick={handleNavigate}>
         <div className="relative">
           {/* Game thumbnail */}
-          <img 
-            src={thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? thumbnailSrc : '/assets/logo.png'} 
+          <LazyImage
+            src={thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? thumbnailSrc : '/assets/logo.png'}
             alt={game.title}
+            ratio="4/3"
+            priority={priority}
             className="w-full aspect-[4/3] object-cover"
-            loading={priority ? "eager" : "lazy"}
+            placeholderText={game.title}
           />
           
           {/* Gradient overlay on hover/focus */}
@@ -119,7 +125,21 @@ export default function GameCardMobile({ game, priority = false }: GameCardMobil
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setLocation(`/games/${game.slug}`);
+                // Navigate immediately
+                window.location.href = `/games/${(game as any).gameDir}/index.html`;
+                // Fire background log (best effort)
+                try {
+                  if (navigator.sendBeacon) {
+                    navigator.sendBeacon(`/api/games/${game.id}/play`, JSON.stringify({}));
+                  } else {
+                    fetch(`/api/games/${game.id}/play`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: '{}',
+                      credentials: 'include'
+                    }).catch(() => {});
+                  }
+                } catch {}
               }}
             >
               Play Now

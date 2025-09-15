@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Game } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { favorites } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -24,7 +25,9 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
   // Check if game is favorited
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [`/api/favorites/is-favorite/${game.id}`],
-    enabled: isAuthenticated, // Only fetch if user is authenticated
+    queryFn: () => favorites.isFavorite(game.id), // Use our custom API that handles 401 silently
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry since our API handles errors gracefully
   });
 
   const isFavorite = favoriteData?.isFavorite || false;
@@ -132,26 +135,41 @@ export default function GameCard({ game, isCompact = false, priority = false }: 
       <a href={`/games/${game.slug}`} onClick={handleNavigate} className="block focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black rounded-lg outline-none">
         {/* IMAGE + overlay */}
         <div className="relative overflow-hidden aspect-[16/9]">
-          {thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? (
-            <img 
-              src={thumbnailSrc} 
-              alt={game.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-            />
-          ) : (
-            <img 
-              src="/assets/logo.png"
-              alt={game.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-            />
-          )}
+          <LazyImage
+            src={thumbnailSrc && thumbnailSrc !== '/assets/logo.png' ? thumbnailSrc : '/assets/logo.png'}
+            alt={game.title}
+            ratio="16/9"
+            priority={priority}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            placeholderText={game.title}
+          />
           
           <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none
                           bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
           {/* Play Now Button - slides in from bottom */}
           <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-            <button className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Navigate immediately
+                window.location.href = `/games/${(game as any).gameDir}/index.html`;
+                // Fire background log (best effort)
+                try {
+                  if (navigator.sendBeacon) {
+                    navigator.sendBeacon(`/api/games/${game.id}/play`, JSON.stringify({}));
+                  } else {
+                    fetch(`/api/games/${game.id}/play`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: '{}',
+                      credentials: 'include'
+                    }).catch(() => {});
+                  }
+                } catch {}
+              }}
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold
                                bg-gradient-to-r from-amber-400 via-orange-400 to-pink-500 text-slate-900
                                shadow-[0_8px_24px_-6px_rgba(251,191,36,0.45)]
                                hover:shadow-[0_10px_32px_-6px_rgba(251,191,36,0.6)] transition-all w-full justify-center">

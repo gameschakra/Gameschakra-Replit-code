@@ -46,18 +46,32 @@ export function LazyImage({
     // Skip observer for priority images
     if (priority) return;
 
+    // Fallback timeout to ensure images load even if observer fails
+    const fallbackTimeout = setTimeout(() => {
+      setIsInView(true);
+    }, 2000);
+
+    if (!window.IntersectionObserver) {
+      // Fallback for browsers without IntersectionObserver support
+      setIsInView(true);
+      clearTimeout(fallbackTimeout);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsInView(true);
             observer.disconnect();
+            clearTimeout(fallbackTimeout);
           }
         });
       },
       {
-        rootMargin: '200px 0px', // Load images 200px before they enter viewport
-        threshold: 0.01,
+        root: null, // Use document viewport as root
+        rootMargin: '200px', // Load images 200px before they enter viewport
+        threshold: 0, // Trigger as soon as any part of the element is visible
       }
     );
 
@@ -67,6 +81,7 @@ export function LazyImage({
 
     return () => {
       observer.disconnect();
+      clearTimeout(fallbackTimeout);
     };
   }, [priority]);
 

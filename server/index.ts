@@ -31,11 +31,9 @@ import { log, warn, error } from "./logger";
 
 const app = express();
 
-// Trust proxy configuration - configurable based on environment
-if (process.env.TRUST_PROXY === 'true') {
-  app.set('trust proxy', 1);
-  console.log('🔧 Trust proxy enabled');
-}
+// Trust proxy configuration - we are behind Nginx/HTTPS
+app.set('trust proxy', 1);
+log('🔧 Trust proxy enabled for production');
 
 // Configure middleware with production-optimized limits
 const bodyLimit = process.env.BODY_PARSER_LIMIT || '50mb';

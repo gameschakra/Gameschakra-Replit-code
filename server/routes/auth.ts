@@ -201,9 +201,10 @@ router.post('/logout', (req, res) => {
       }
       
       res.clearCookie('gc_sid', {
-        domain: process.env.NODE_ENV === 'production' ? '.gameschakra.com' : undefined,
+        domain: process.env.NODE_ENV === 'production' ? 'gameschakra.com' : undefined,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        sameSite: 'lax',
+        path: '/'
       });
       
       res.json({ message: 'Logged out successfully' });

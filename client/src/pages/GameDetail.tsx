@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
 import { Game } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { favorites } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -86,7 +87,10 @@ export default function GameDetail() {
   // Check if game is favorited
   const { data: favoriteData } = useQuery<{ isFavorite: boolean }>({
     queryKey: [`/api/favorites/is-favorite/${game?.id}`],
+    queryFn: () => game ? favorites.isFavorite(game.id) : Promise.resolve({ isFavorite: false }),
     enabled: !!game?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry since our API handles errors gracefully
   });
   
   // Update favorite state when data changes
@@ -100,8 +104,25 @@ export default function GameDetail() {
   const trackPlayMutation = useMutation({
     mutationFn: async () => {
       if (!game) return null;
-      const response = await apiRequest("POST", `/api/games/${game.id}/play`, {});
-      return response.json();
+
+      // Use fire-and-forget approach for play tracking
+      try {
+        // Use sendBeacon for better reliability
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            `/api/games/${game.id}/play`,
+            new Blob([JSON.stringify({})], { type: 'application/json' })
+          );
+          return { ok: true };
+        } else {
+          // Fallback to fetch
+          const response = await apiRequest("POST", `/api/games/${game.id}/play`, {});
+          return response;
+        }
+      } catch (error) {
+        console.warn("Play tracking failed:", error);
+        return { ok: false };
+      }
     },
   });
 

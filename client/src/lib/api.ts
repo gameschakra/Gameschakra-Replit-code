@@ -149,7 +149,29 @@ export const favorites = {
   
   // Check if a game is favorited
   async isFavorite(gameId: number): Promise<{ isFavorite: boolean }> {
-    return apiRequest("GET", `/api/favorites/is-favorite/${gameId}`, null);
+    try {
+      const r = await fetch(`/api/favorites/is-favorite/${gameId}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (r.status === 401) {
+        // Not logged in - return false silently
+        return { isFavorite: false };
+      }
+
+      if (!r.ok) {
+        throw new Error(`${r.status}: ${r.statusText}`);
+      }
+
+      return await r.json();
+    } catch (error) {
+      console.warn("Failed to check favorite status:", error);
+      return { isFavorite: false };
+    }
   }
 };
 

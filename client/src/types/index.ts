@@ -48,43 +48,22 @@ export interface BlogTag {
   postCount?: number;
 }
 
-// Game types
-export interface Game {
-  id: number;
-  title: string;
-  slug: string;
-  description: string;
-  instructions: string | null;
-  thumbnailUrl: string | null;
-  gameDir: string;
-  entryFile: string;
-  width: number;
-  height: number;
-  status: 'pending' | 'approved' | 'rejected';
-  uploaderId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-  categoryIds?: number[];
-  featured: boolean;
-  views: number;
-  likes: number;
-  plays: number;
+// Game types (importing from shared schema)
+import type { Game as BaseGame, GameCategory as BaseGameCategory } from '@shared/schema';
+
+export interface Game extends BaseGame {
+  category?: GameCategory;
   uploader?: {
     id: number;
     username: string;
   };
+  relatedGames?: Game[];
 }
 
-export interface GameCategory {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  icon: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+export interface GameCategory extends BaseGameCategory {
   gameCount?: number;
 }
+
 
 // User types
 export interface User {
