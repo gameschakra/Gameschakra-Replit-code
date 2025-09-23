@@ -17,14 +17,15 @@ import { useRecentlyPlayed } from "@/hooks/useRecentlyPlayed";
 // GC_UX: Enhanced fullscreen overlay with UX improvements
 import FullscreenGameOverlay from "@/components/games/FullscreenGameOverlay";
 // GC_SEO: Import new centralized SEO utilities
-import { 
-  applyMeta, 
-  injectJsonLd, 
-  clearJsonLd, 
-  generateBreadcrumbJsonLd, 
-  generateGameJsonLd, 
-  getBaseUrl 
+import {
+  applyMeta,
+  injectJsonLd,
+  clearJsonLd,
+  generateBreadcrumbJsonLd,
+  generateGameJsonLd,
+  getBaseUrl
 } from "@/lib/seo";
+import { toGame, toPlay } from "@/utils/urls";
 
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -52,10 +53,18 @@ export default function GameDetailsPage() {
     };
   }, []);
 
-  // Fetch game details
+  // Fetch game details with 404 fallback to /play/
   const { data: game, isLoading, error } = useQuery<Game>({
     queryKey: [`/api/games/${slug}`],
     staleTime: 1000 * 60, // 1 minute
+    retry: (failureCount, error) => {
+      // If we get a 404, redirect to play route instead of retrying
+      if (error && (error as any).status === 404) {
+        setLocation(toPlay(slug || ''));
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
   
   // Fetch similar games
@@ -145,9 +154,9 @@ export default function GameDetailsPage() {
   const handlePlayGame = async () => {
     if (!game) return;
 
-    // Navigate immediately to game
-    if (game.gameDir) {
-      window.location.href = `/games/${game.gameDir}/index.html`;
+    // Navigate immediately to game using /play/ route
+    if (game.slug) {
+      window.location.href = toPlay(game.slug);
     }
 
     // Track play in background (best effort, don't block navigation)

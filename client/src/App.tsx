@@ -31,9 +31,11 @@ import Settings from "@/pages/Settings";
 import { GamesListByCategory } from "@/pages/GamesListByCategory";
 import Search from "@/pages/Search";
 import SubmitGame from "@/pages/SubmitGame";
+import PlayFrame from "@/pages/PlayFrame";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ScrollToTopButton from "@/components/layout/ScrollToTop";
+import FloatingGameButton from "@/components/ui/FloatingGameButton";
 import AutoAds from "@/components/ads/AutoAds";
 import AdBlockDetector from "@/components/ads/AdBlockDetector";
 import DynamicAd from "@/components/ads/DynamicAd";
@@ -41,10 +43,13 @@ import { useEffect } from "react";
 import { AuthProvider } from "./providers/AuthProvider";
 
 import { useScrollToTop } from './hooks/useScrollToTop';
+import { useLinkNormalizer } from './hooks/useLinkNormalizer';
 
 function Router() {
   // Use the scroll to top hook
   useScrollToTop();
+  // Use the link normalizer hook for trailing slash enforcement
+  useLinkNormalizer();
   
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -55,7 +60,8 @@ function Router() {
           <Route path="/leaderboard" component={Leaderboard} />
           <Route path="/search" component={Search} />
           <Route path="/category/:slug" component={GamesListByCategory} />
-          <Route path="/games/:slug" component={GameDetailsPage} />
+          <Route path="/games/:slug/*" component={GameDetailsPage} />
+          <Route path="/play/:slug/*" component={PlayFrame} />
           <Route path="/challenges/:slug" component={({params}) => <ChallengePage params={params} />} />
           <Route path="/admin/analytics" component={AnalyticsDashboard} />
           <Route path="/admin/analytics/games/:id" component={GameAnalytics} />
@@ -100,6 +106,7 @@ function App() {
           <AutoAds adClient="ca-pub-2067900913632539" />
           <Router />
           <ScrollToTopButton />
+          {/* <FloatingGameButton /> */}
           <AdBlockDetector />
           <DynamicAd adClient="ca-pub-2067900913632539" adSlot="5962072398" />
           <Toaster />
