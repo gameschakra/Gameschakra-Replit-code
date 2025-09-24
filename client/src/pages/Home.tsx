@@ -310,7 +310,6 @@ export default function Home() {
       case "featured": return "Featured Games";
       case "new": return "New Games";
       case "trending": return "Trending Games";
-      case "multiplayer": return "Multiplayer Games";
       case "favorites": return "My Favorites";
       case "recent": return "Recently Played";
       case "challenges": return "Community Challenges";
@@ -521,14 +520,6 @@ export default function Home() {
                   >
                     <ColorIcon icon={Award} gradient="fuchsia" size="sm" active={activeSection === 'featured'} className="mr-3" />
                     Featured
-                  </Link>
-                  <Link 
-                    href="/?section=multiplayer" 
-                    className={`flex items-center px-2 py-2 text-sm rounded-lg transition-colors ${activeSection === 'multiplayer' ? 'bg-amber-500/20 text-amber-400 font-medium' : 'text-gray-300 hover:bg-gray-800/70 hover:text-amber-500'}`}
-                    onClick={(e) => {e.preventDefault(); setActiveSection('multiplayer'); setSelectedCategory(null)}}
-                  >
-                    <ColorIcon icon={Users} gradient="emerald" size="sm" active={activeSection === 'multiplayer'} className="mr-3" />
-                    Multiplayer
                   </Link>
                 </nav>
               </div>

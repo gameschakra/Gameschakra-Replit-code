@@ -39,5 +39,3 @@ export async function attachVite(app: Express) {
     }
   });
 }
-
-  return vite;

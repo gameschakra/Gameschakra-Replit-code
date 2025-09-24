@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 type ColorIconProps = {
   icon: LucideIcon;
   size?: "sm"|"md";
-  gradient?: "violet"|"fuchsia"|"orange"|"cyan"|"emerald"|"rose"|"sky"|"amber";
+  gradient?: "violet"|"fuchsia"|"orange"|"cyan"|"emerald"|"rose"|"sky"|"amber"|"pink"|"green";
   active?: boolean;
   className?: string;
 };
@@ -18,6 +18,8 @@ const MAP: Record<NonNullable<ColorIconProps["gradient"]>, string> = {
   rose:    "from-rose-500 to-orange-400",
   sky:     "from-sky-500 to-indigo-500",
   amber:   "from-amber-500 to-orange-500",
+  pink:    "from-pink-500 to-rose-500",
+  green:   "from-green-500 to-emerald-500",
 };
 
 export function ColorIcon({

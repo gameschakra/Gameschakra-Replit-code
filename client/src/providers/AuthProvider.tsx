@@ -36,6 +36,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [lastAuthCheck, setLastAuthCheck] = useState<Date>(new Date());
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
   
   // Get current user query
   const {
@@ -69,10 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Login response:', response);
       return response.user;
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
       // Refetch user data
       setLastAuthCheck(new Date());
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+
+      // Show welcome back message with animation
+      toast({
+        title: `Welcome back, ${user.username || user.name}! 🎮`,
+        description: 'Great to have you back in the game!',
+        className: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0',
+      });
     },
     onError: (error: Error) => {
       console.error('Login error:', error);
@@ -93,35 +101,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       // Clear user data
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      
+
       // Clear all favorites-related queries completely
-      queryClient.removeQueries({ 
+      queryClient.removeQueries({
         predicate: (query) => {
           const queryKey = query.queryKey as string[];
-          return queryKey.some(key => 
-            typeof key === 'string' && 
+          return queryKey.some(key =>
+            typeof key === 'string' &&
             (key.includes('/api/favorites') || key.includes('favorites'))
           );
         }
       });
-      
+
       // Also clear any recently played or user-specific data
-      queryClient.removeQueries({ 
+      queryClient.removeQueries({
         predicate: (query) => {
           const queryKey = query.queryKey as string[];
-          return queryKey.some(key => 
-            typeof key === 'string' && 
+          return queryKey.some(key =>
+            typeof key === 'string' &&
             (key.includes('/api/recently-played') || key.includes('recently-played'))
           );
         }
       });
-      
+
       // Force a re-render by updating auth check timestamp
       setLastAuthCheck(new Date());
-      
+
       toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out',
+        title: 'See you soon! 👋',
+        description: 'You have been logged out successfully',
+        className: 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0',
       });
     },
     onError: (error: Error) => {
@@ -164,13 +173,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       return response.user;
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
       // Refetch user data
       setLastAuthCheck(new Date());
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       toast({
-        title: 'Registration successful',
-        description: 'Your account has been created',
+        title: `Welcome to GamesChakra, ${user.username || user.name}! 🎉`,
+        description: 'Your gaming adventure starts now!',
+        className: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black border-0',
       });
     },
     onError: (error: Error) => {
@@ -234,6 +244,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  // Show welcome message for OAuth login (Google/Apple)
+  useEffect(() => {
+    // Check if we just logged in via OAuth (URL has auth=success)
+    const urlParams = new URLSearchParams(window.location.search);
+    const authSuccess = urlParams.get('auth');
+
+    if (authSuccess === 'success' && user && !hasShownWelcome && !isLoading) {
+      // Show welcome toast for OAuth login
+      toast({
+        title: `Welcome back, ${user.username || user.name}! 🎮`,
+        description: 'Great to have you back in the game!',
+        className: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0',
+      });
+
+      setHasShownWelcome(true);
+
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('auth');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [user, isLoading, hasShownWelcome, toast]);
+
+  // Reset welcome flag when user changes
+  useEffect(() => {
+    if (!user) {
+      setHasShownWelcome(false);
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider

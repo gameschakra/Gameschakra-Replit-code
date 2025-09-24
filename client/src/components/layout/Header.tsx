@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, Gamepad2, Trophy, TrendingUp, FileText, Code } from "lucide-react";
+import { Home, Gamepad2, Trophy, TrendingUp, FileText, Code, Heart, Clock, Settings, UserCircle, LogOut } from "lucide-react";
 import { SidebarItem } from "@/components/navigation/SidebarItem";
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ export default function Header() {
 
   // Get user data from AuthProvider
   const { user, isLoading, logout } = useAuth();
+  const [showAnimation, setShowAnimation] = useState(false);
 
   // Handle logout
   const handleLogout = async () => {
@@ -67,6 +68,14 @@ export default function Header() {
       window.removeEventListener('keydown', handleEscKey);
     };
   }, [showMobileSearch]);
+
+  // Add entrance animation when user changes
+  useEffect(() => {
+    if (user) {
+      setShowAnimation(true);
+      setTimeout(() => setShowAnimation(false), 600);
+    }
+  }, [user?.id]);
 
   return (
     <header className="bg-background sticky top-0 z-50 border-b border-border/20 shadow-md w-full overflow-x-hidden">
@@ -117,7 +126,10 @@ export default function Header() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
+                <Button className={cn(
+                  "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none",
+                  showAnimation && "animate-in zoom-in-95 fade-in duration-500"
+                )}>
                   <span className="material-icons mr-1 text-sm">person</span>
                   {user.username || user.name}
                 </Button>
@@ -142,15 +154,23 @@ export default function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50 focus:bg-red-50">
                   <span className="material-icons mr-2 text-sm">logout</span>
                   Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none">
-              <Link href="/login">Log In</Link>
+            <Button className={cn(
+              "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-medium transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 hover:scale-105 focus-visible:ring-2 ring-amber-400/50 ring-offset-2 ring-offset-black outline-none",
+              !isLoading && "animate-in fade-in duration-500"
+            )}>
+              <Link href="/login">
+                <span className="flex items-center gap-1">
+                  <span className="material-icons text-sm">login</span>
+                  Log In
+                </span>
+              </Link>
             </Button>
           )}
         </nav>
@@ -180,7 +200,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Search Bar */}
-      <div 
+      <div
         className={cn(
           "md:hidden bg-background border-b border-border/20 overflow-hidden transition-all duration-300 w-full",
           showMobileSearch ? "max-h-16 py-3 opacity-100" : "max-h-0 py-0 opacity-0"
@@ -201,7 +221,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Sidebar Menu */}
-      <div 
+      <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-gray-900/95 backdrop-blur-sm shadow-lg transform transition-transform duration-300 ease-in-out md:hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -210,22 +230,30 @@ export default function Header() {
       >
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-800">
-            <Link href="/" className="flex items-center" onClick={() => {
-              setMobileMenuOpen(false);
-              navigate("/");
-            }}>
-              <span className="font-title font-bold text-xl text-white">GAMES<span className="text-amber-500">CHAKRA</span></span>
-            </Link>
+            {user ? (
+              <div className="flex items-center">
+                <span className="material-icons text-amber-500 mr-2">person</span>
+                <span className="font-bold text-lg text-white truncate">{user.username || user.name}</span>
+              </div>
+            ) : (
+              <Link href="/" className="flex items-center" onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/");
+              }}>
+                <span className="font-title font-bold text-xl text-white">GAMES<span className="text-amber-500">CHAKRA</span></span>
+              </Link>
+            )}
           </div>
           
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="px-4 space-y-2">
               <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                <SidebarItem 
-                  icon={Home} 
-                  label="Home" 
+                <SidebarItem
+                  icon={Home}
+                  label="Home"
                   isActive={location === "/"}
                   color="amber"
+                  className="hover:bg-purple-500/20"
                 />
               </Link>
               <Link href="/?section=all" onClick={() => setMobileMenuOpen(false)}>
@@ -245,11 +273,27 @@ export default function Header() {
                 />
               </Link>
               <Link href="/?section=popular" onClick={() => setMobileMenuOpen(false)}>
-                <SidebarItem 
-                  icon={TrendingUp} 
-                  label="Popular" 
+                <SidebarItem
+                  icon={TrendingUp}
+                  label="Popular"
                   isActive={location.includes("section=popular")}
                   color="sky"
+                />
+              </Link>
+              <Link href="/?section=favorites" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem
+                  icon={Heart}
+                  label="Favorites"
+                  isActive={location.includes("section=favorites")}
+                  color="pink"
+                />
+              </Link>
+              <Link href="/?section=recently-played" onClick={() => setMobileMenuOpen(false)}>
+                <SidebarItem
+                  icon={Clock}
+                  label="Recently Played"
+                  isActive={location.includes("section=recently-played")}
+                  color="green"
                 />
               </Link>
               <Link href="/blog" onClick={() => setMobileMenuOpen(false)}>
@@ -279,12 +323,6 @@ export default function Header() {
             {/* Mobile Auth Section */}
             {user ? (
               <div className="mt-3 space-y-2">
-                <div className="py-2 px-3 text-amber-500 rounded-md bg-gray-800">
-                  <div className="flex items-center">
-                    <span className="material-icons mr-2">person</span>
-                    <span className="truncate">{user.username || user.name}</span>
-                  </div>
-                </div>
                 {user.isAdmin && (
                   <button
                     onClick={() => {
@@ -299,6 +337,30 @@ export default function Header() {
                     </div>
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    navigate("/profile");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full py-2 px-3 text-gray-300 hover:text-white transition-colors rounded-md bg-gray-800/50 hover:bg-gray-700"
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="material-icons mr-2">person</span>
+                    <span>Profile</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/settings");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full py-2 px-3 text-gray-300 hover:text-white transition-colors rounded-md bg-gray-800/50 hover:bg-gray-700"
+                >
+                  <div className="flex items-center justify-center">
+                    <span className="material-icons mr-2">settings</span>
+                    <span>Settings</span>
+                  </div>
+                </button>
                 <button
                   onClick={() => {
                     handleLogout();
@@ -330,11 +392,12 @@ export default function Header() {
       
       {/* Dark overlay when sidebar is open */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
+
     </header>
   );
 }
