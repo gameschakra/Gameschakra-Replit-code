@@ -100,7 +100,6 @@ export async function apiRequest<T = any>(
 
     // Enhanced debug info
     console.log(`[API Response] Status: ${res.status} ${res.statusText}`);
-    console.log(`[API Response] Has credentials: ${res.type === 'cors' ? 'yes' : 'no'}`);
     console.log(`[API Response] Mode: ${res.type}`);
     console.log(`[API Response] Cookies after:`, document.cookie);
     

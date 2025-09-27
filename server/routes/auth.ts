@@ -121,13 +121,20 @@ router.post('/register', authLimiter, async (req, res) => {
       country,
     }).returning();
 
-    // Auto-login after registration
+    // Auto-login after registration with explicit session save
     req.login(newUser, (err) => {
       if (err) {
         console.error('Auto-login error after registration:', err);
         return res.status(500).json({ error: 'Registration successful but login failed' });
       }
-      res.status(201).json({ user: sanitizeUser(newUser) });
+      // Explicitly save session before responding
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error after registration:', saveErr);
+          return res.status(500).json({ error: 'Registration successful but session save failed' });
+        }
+        res.status(201).json({ user: sanitizeUser(newUser) });
+      });
     });
 
   } catch (error) {
@@ -173,7 +180,14 @@ router.post('/login', authLimiter, (req, res, next) => {
           console.error('Session login error:', loginErr);
           return res.status(500).json({ error: 'Login failed' });
         }
-        res.json({ user: sanitizeUser(user) });
+        // Explicitly save session before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error after login:', saveErr);
+            return res.status(500).json({ error: 'Login successful but session save failed' });
+          }
+          res.json({ user: sanitizeUser(user) });
+        });
       });
     })(req, res, next);
   } catch (error) {
@@ -201,10 +215,11 @@ router.post('/logout', (req, res) => {
       }
       
       res.clearCookie('gc_sid', {
-        domain: process.env.NODE_ENV === 'production' ? 'gameschakra.com' : undefined,
-        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.COOKIE_DOMAIN,
+        path: '/',
+        secure: process.env.SECURE_COOKIES === 'true',
         sameSite: 'lax',
-        path: '/'
+        httpOnly: true,
       });
       
       res.json({ message: 'Logged out successfully' });
@@ -238,10 +253,16 @@ router.get('/google', (req, res, next) => {
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/login?error=google_auth_failed' }),
   (req, res) => {
-    // Successful authentication
+    // Successful authentication - save session before redirect
     const redirectUrl = req.session?.returnTo || '/?auth=success';
     delete req.session?.returnTo;
-    res.redirect(redirectUrl);
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error after Google auth:', err);
+        return res.redirect('/login?error=session_save_failed');
+      }
+      res.redirect(redirectUrl);
+    });
   }
 );
 
@@ -253,10 +274,16 @@ router.get('/apple',
 router.post('/apple/callback',
   passport.authenticate('apple', { failureRedirect: '/login?error=apple_auth_failed' }),
   (req, res) => {
-    // Successful authentication
+    // Successful authentication - save session before redirect
     const redirectUrl = req.session?.returnTo || '/?auth=success';
     delete req.session?.returnTo;
-    res.redirect(redirectUrl);
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error after Apple auth:', err);
+        return res.redirect('/login?error=session_save_failed');
+      }
+      res.redirect(redirectUrl);
+    });
   }
 );
 
@@ -264,10 +291,16 @@ router.post('/apple/callback',
 router.get('/apple/callback',
   passport.authenticate('apple', { failureRedirect: '/login?error=apple_auth_failed' }),
   (req, res) => {
-    // Successful authentication
+    // Successful authentication - save session before redirect
     const redirectUrl = req.session?.returnTo || '/?auth=success';
     delete req.session?.returnTo;
-    res.redirect(redirectUrl);
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error after Apple auth (GET):', err);
+        return res.redirect('/login?error=session_save_failed');
+      }
+      res.redirect(redirectUrl);
+    });
   }
 );
 

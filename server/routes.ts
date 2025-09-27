@@ -2,6 +2,9 @@ import express, { Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
+import pg from "pg";
+import connectPgSimple from "connect-pg-simple";
+import cors from "cors";
 import passport from "./auth/passport";
 import bcrypt from "bcryptjs";
 import { authRouter } from "./routes/auth";
@@ -17,10 +20,10 @@ import * as gameService from "./services/gameService";
 import { isAdmin, isAuthenticated, loadUser } from "./middleware/auth";
 import { analyticsTracker } from "./middleware/analytics";
 import { z } from "zod";
-import { 
-  insertUserSchema, insertGameSchema, insertCategorySchema, 
+import {
+  insertUserSchema, insertGameSchema, insertCategorySchema,
   insertFavoriteSchema, insertRecentlyPlayedSchema,
-  users 
+  users
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
@@ -47,66 +50,61 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     res.json({ status: 'healthy', ts: Date.now() });
   });
 
-  // Configure CORS headers for all requests - dev-safe, prod-safe
-  app.use((req, res, next) => {
-    const isProd = process.env.NODE_ENV === 'production';
-    const origin = req.headers.origin;
-    
-    // Define allowed origins
-    const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'];
-    const PROD_ORIGINS = ['https://gameschakra.com', 'https://www.gameschakra.com', 'http://gameschakra.com', 'http://www.gameschakra.com'];
-    const ALLOWED_ORIGINS = isProd ? PROD_ORIGINS : DEV_ORIGINS;
-    
-    // Set CORS origin based on environment
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Vary', 'Origin');
-    } else if (!isProd) {
-      // In development, be more permissive for debugging
-      res.header('Access-Control-Allow-Origin', origin || '*');
-    }
-    
-    // Set complete CORS headers
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Expose-Headers', 'Set-Cookie, Content-Disposition');
-    res.header('Access-Control-Max-Age', '86400');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(204);
-    }
-    
-    next();
-  });
+  // Enhanced CORS configuration for production
+  const allowed = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 
-  // Configure session with proper production/development settings
-  const isProd = process.env.NODE_ENV === 'production';
-  const secureCookies = isProd; // Always secure in production (behind HTTPS)
-  const sameSiteCookies = 'lax'; // Use 'lax' for same domain
-  const cookieDomain = isProd ? 'gameschakra.com' : undefined; // No subdomain prefix for main domain
-  
-  console.log(`🍪 Session config: secure=${secureCookies}, sameSite=${sameSiteCookies}, domain=${cookieDomain || 'default'}, trustProxy=true`);
-  
+  app.use(cors({
+    origin: (origin, cb) => {
+      // Allow same-origin/no-origin (e.g. curl, server-to-server, or direct browser nav)
+      if (!origin) return cb(null, true);
+      return cb(null, allowed.includes(origin));
+    },
+    credentials: true,
+    methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
+    allowedHeaders: ['Content-Type','Authorization','Cookie','X-Requested-With'],
+    exposedHeaders: ['Set-Cookie','Content-Disposition'],
+    maxAge: 86400,
+  }));
+
+  // Configure session store - use memory store for development, Postgres for production
+  let sessionStore;
+
+  if (process.env.NODE_ENV === 'production') {
+    // Production: Use PostgreSQL session store
+    const PgSession = connectPgSimple(session);
+    const pgPool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      // IMPORTANT for PgBouncer:
+      ssl: false,
+    });
+
+    sessionStore = new PgSession({
+      pool: pgPool,
+      tableName: 'session',
+      createTableIfMissing: true,
+    });
+  }
+  // Development: Use default memory store (sessionStore will be undefined)
+
   const sessionMiddleware = session({
     name: 'gc_sid',
-    secret: process.env.SESSION_SECRET || "gamehub-secret",
+    ...(sessionStore && { store: sessionStore }), // Only add store in production
+    secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,   // Always httpOnly for security
-      secure: secureCookies,
-      sameSite: sameSiteCookies as 'strict' | 'lax' | 'none',
-      domain: cookieDomain,
+      httpOnly: true,
+      secure: process.env.SECURE_COOKIES === 'true', // true on prod
+      sameSite: 'lax', // works with OAuth redirects
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
       path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
-    rolling: true,
-    proxy: true, // Always true since we're behind Nginx
-    genid: () => crypto.randomUUID()
   });
-  
+
   // Apply session middleware
   app.use(sessionMiddleware);
 
@@ -1090,7 +1088,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
-  // GC_FIX: canonical thumbnail redirect
+  // GC_FIX: canonical thumbnail redirect with placeholder fallback
   api.get('/games/:id/thumbnail', async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid id' });
@@ -1113,7 +1111,21 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           return res.redirect(302, `/${game.thumbnailUrl.replace(/^\//, '')}`);
         } catch {}
       }
-      return res.status(404).json({ message: 'Thumbnail not found' });
+
+      // Return placeholder image instead of 404 JSON
+      const placeholderPath = path.join(projectRoot, 'public', 'images', 'placeholder-game.png');
+      try {
+        await fs.promises.access(placeholderPath);
+        return res.sendFile(placeholderPath);
+      } catch {
+        // If no placeholder exists, serve a minimal SVG placeholder
+        res.setHeader('Content-Type', 'image/svg+xml');
+        const svgPlaceholder = `<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100%" height="100%" fill="#f3f4f6"/>
+          <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" fill="#6b7280" text-anchor="middle" dy="0.3em">No Image</text>
+        </svg>`;
+        return res.send(svgPlaceholder);
+      }
     }
   });
 
