@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { isAuthenticated } from '../middleware/auth';
+import { promisify } from 'node:util';
 
 const router = express.Router();
 
@@ -160,80 +161,76 @@ router.post('/register', authLimiter, async (req, res) => {
   }
 });
 
+// Helper functions for promisified session operations
+const regen = (req: any) => promisify(req.session.regenerate).call(req.session);
+const save = (req: any) => promisify(req.session.save).call(req.session);
+const destroy = (req: any) => promisify(req.session.destroy).call(req.session);
+
 // POST /api/auth/login
-router.post('/login', authLimiter, (req, res, next) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
-    const validatedData = loginSchema.parse(req.body);
-    
-    passport.authenticate('local', (err: any, user: User | false, info: any) => {
-      if (err) {
-        console.error('Login error:', err);
-        return res.status(500).json({ error: 'Login failed' });
+    const { email, password } = req.body ?? {};
+    if (!email || !password) return res.status(400).json({ message: "Email & password required" });
+
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+
+    await regen(req);
+
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      username: user.username,
+      phone: user.phone,
+      isAdmin: user.isAdmin
+    };
+
+    // enforce cookie flags
+    req.session.cookie.sameSite = "lax";
+    req.session.cookie.secure = process.env.NODE_ENV === "production";
+    if (process.env.COOKIE_DOMAIN) req.session.cookie.domain = process.env.COOKIE_DOMAIN;
+
+    await save(req);
+
+    // optional explicit cookie set (helps behind proxies)
+    res.cookie(process.env.SESSION_COOKIE_NAME || "gc_sid", req.sessionID, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain: process.env.COOKIE_DOMAIN || undefined,
+      path: "/"
+    });
+
+    return res.json({
+      user: {
+        id: user.id, email: user.email, name: user.name,
+        username: user.username, phone: user.phone, isAdmin: user.isAdmin
       }
-      
-      if (!user) {
-        return res.status(401).json({ error: info?.message || 'Invalid credentials' });
-      }
-      
-      req.login(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Session login error:', loginErr);
-          return res.status(500).json({ error: 'Login failed' });
-        }
-        // Explicitly save session before responding
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error('Session save error after login:', saveErr);
-            return res.status(500).json({ error: 'Login successful but session save failed' });
-          }
-          res.json({ user: sanitizeUser(user) });
-        });
-      });
-    })(req, res, next);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = fromZodError(error);
-      return res.status(400).json({ error: validationError.message });
-    }
-    res.status(500).json({ error: 'Login failed' });
+    });
+  } catch (e) {
+    console.error("Login error:", e);
+    return res.status(500).json({ message: "Login failed" });
   }
 });
 
 // POST /api/auth/logout
-router.post('/logout', (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      console.error('Logout error:', err);
-      return res.status(500).json({ error: 'Logout failed' });
-    }
-    
-    // Destroy session
-    req.session.destroy((destroyErr) => {
-      if (destroyErr) {
-        console.error('Session destroy error:', destroyErr);
-        return res.status(500).json({ error: 'Logout failed' });
-      }
-      
-      res.clearCookie('gc_sid', {
-        domain: process.env.COOKIE_DOMAIN,
-        path: '/',
-        secure: process.env.SECURE_COOKIES === 'true',
-        sameSite: 'lax',
-        httpOnly: true,
-      });
-      
-      res.json({ message: 'Logged out successfully' });
-    });
-  });
+router.post('/logout', async (req, res) => {
+  const cname = process.env.SESSION_COOKIE_NAME || "gc_sid";
+  try {
+    await destroy(req);
+  } finally {
+    res.clearCookie(cname, { path: "/", domain: process.env.COOKIE_DOMAIN || undefined });
+    res.json({ ok: true });
+  }
 });
 
 // GET /api/auth/me
 router.get('/me', (req, res) => {
-  if (req.user) {
-    res.json({ user: sanitizeUser(req.user as User) });
-  } else {
-    res.json({ user: null });
-  }
+  return res.json({ user: req.session?.user ?? null });
 });
 
 // Google OAuth routes
@@ -252,17 +249,27 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/login?error=google_auth_failed' }),
-  (req, res) => {
-    // Successful authentication - save session before redirect
-    const redirectUrl = req.session?.returnTo || '/?auth=success';
-    delete req.session?.returnTo;
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error after Google auth:', err);
-        return res.redirect('/login?error=session_save_failed');
+  async (req, res) => {
+    try {
+      // Set session user data manually from req.user
+      if (req.user) {
+        const user = req.user as any;
+        req.session.user = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+          phone: user.phone,
+          isAdmin: user.isAdmin
+        };
       }
-      res.redirect(redirectUrl);
-    });
+
+      await save(req);
+      return res.redirect('/');
+    } catch (err) {
+      console.error('Google OAuth callback error:', err);
+      return res.redirect('/login?error=session_save_failed');
+    }
   }
 );
 
@@ -273,13 +280,25 @@ router.get('/apple',
 
 router.post('/apple/callback',
   passport.authenticate('apple', { failureRedirect: '/login?error=apple_auth_failed' }),
-  (req, res) => {
-    // Successful authentication - save session before redirect
-    const redirectUrl = req.session?.returnTo || '/?auth=success';
-    delete req.session?.returnTo;
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error after Apple auth:', err);
+  async (req, res) => {
+    try {
+      // Set session user data manually from req.user
+      if (req.user) {
+        const user = req.user as any;
+        req.session.user = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+          phone: user.phone,
+          isAdmin: user.isAdmin
+        };
+      }
+
+      await save(req);
+      return res.redirect('/');
+    } catch (err) {
+      console.error('Apple OAuth callback error:', err);
         return res.redirect('/login?error=session_save_failed');
       }
       res.redirect(redirectUrl);

@@ -69,40 +69,28 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     maxAge: 86400,
   }));
 
-  // Configure session store - use memory store for development, Postgres for production
-  let sessionStore;
+  // Configure session store with proper PgBouncer support
+  const PgStore = connectPgSimple(session);
 
-  if (process.env.NODE_ENV === 'production') {
-    // Production: Use PostgreSQL session store
-    const PgSession = connectPgSimple(session);
-    const pgPool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      // IMPORTANT for PgBouncer:
-      ssl: false,
-    });
-
-    sessionStore = new PgSession({
-      pool: pgPool,
-      tableName: 'session',
-      createTableIfMissing: true,
-    });
-  }
-  // Development: Use default memory store (sessionStore will be undefined)
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: /sslmode=disable/i.test(process.env.DATABASE_URL || "") ? false : { rejectUnauthorized: false }
+  });
 
   const sessionMiddleware = session({
-    name: 'gc_sid',
-    ...(sessionStore && { store: sessionStore }), // Only add store in production
+    name: process.env.SESSION_COOKIE_NAME || "gc_sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
+    store: new PgStore({ pool, tableName: "session" }),
     cookie: {
       httpOnly: true,
-      secure: process.env.SECURE_COOKIES === 'true', // true on prod
-      sameSite: 'lax', // works with OAuth redirects
-      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    },
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain: process.env.COOKIE_DOMAIN || ".gameschakra.com",
+      path: "/",
+      maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    }
   });
 
   // Apply session middleware

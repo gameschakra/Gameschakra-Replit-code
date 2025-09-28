@@ -34,26 +34,20 @@ let db: any;
 
 try {
   if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')) {
-    // AWS RDS SSL configuration - production requires SSL
-    const sslConfig = process.env.NODE_ENV === 'production' 
-      ? { 
-          rejectUnauthorized: false, // AWS RDS uses self-signed certificates
-          require: true // Force SSL connection in production
-        }
-      : { rejectUnauthorized: false }; // Allow dev certificates
-    
+    // PgBouncer-compatible configuration
+    const useSSL = process.env.NODE_ENV === "production" && !/sslmode=disable/i.test(connectionString);
+
     client = postgres(connectionString, {
-      ssl: sslConfig,
-      max: parseInt(process.env.MAX_CONNECTIONS || '20'),
-      min: parseInt(process.env.DB_POOL_MIN || '2'),
+      ssl: useSSL ? { rejectUnauthorized: false, require: true } : false,
+      max: parseInt(process.env.MAX_CONNECTIONS || "20"),
+      min: parseInt(process.env.DB_POOL_MIN || "2"),
       idle_timeout: 20,
       max_lifetime: 60 * 30,
       connection: {
-        options: `--search_path=public`
+        // PgBouncer allows only '-c key=val' style
+        options: "-c search_path=public"
       },
-      transform: {
-        undefined: null
-      }
+      transform: { undefined: null }
     });
     
     // Create a drizzle instance
