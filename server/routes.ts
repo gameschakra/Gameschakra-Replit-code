@@ -51,23 +51,15 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   });
 
   // Enhanced CORS configuration for production
-  const allowed = (process.env.CORS_ORIGIN || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
-
-  app.use(cors({
-    origin: (origin, cb) => {
-      // Allow same-origin/no-origin (e.g. curl, server-to-server, or direct browser nav)
-      if (!origin) return cb(null, true);
-      return cb(null, allowed.includes(origin));
+  const allowed = ['https://gameschakra.com', 'https://www.gameschakra.com'];
+  const corsOptions = {
+    origin(origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) {
+      if (!origin) return cb(null, true); // Allow no Origin (same-origin requests)
+      cb(null, allowed.includes(origin));
     },
     credentials: true,
-    methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
-    allowedHeaders: ['Content-Type','Authorization','Cookie','X-Requested-With'],
-    exposedHeaders: ['Set-Cookie','Content-Disposition'],
-    maxAge: 86400,
-  }));
+  };
+  app.use(cors(corsOptions));
 
   // Configure session store with proper PgBouncer support
   const PgStore = connectPgSimple(session);
@@ -78,23 +70,31 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   });
 
   const sessionMiddleware = session({
-    name: process.env.SESSION_COOKIE_NAME || "gc_sid",
+    name: "gc_sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     store: new PgStore({ pool, tableName: "session" }),
     cookie: {
+      domain: ".gameschakra.com",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
-      domain: process.env.COOKIE_DOMAIN || ".gameschakra.com",
-      path: "/",
       maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
   });
 
   // Apply session middleware
   app.use(sessionMiddleware);
+
+  // Add legacy cookie cleanup middleware
+  app.use((req, res, next) => {
+    if (req.cookies?.['gamehub.sid']) {
+      res.clearCookie('gamehub.sid', { domain: '.gameschakra.com', path: '/' });
+    }
+    next();
+  });
 
   // Configure passport (strategies configured in ./auth/passport.ts)
   app.use(passport.initialize());

@@ -122,21 +122,16 @@ router.post('/register', authLimiter, async (req, res) => {
       country,
     }).returning();
 
-    // Auto-login after registration with explicit session save
-    req.login(newUser, (err) => {
-      if (err) {
-        console.error('Auto-login error after registration:', err);
-        return res.status(500).json({ error: 'Registration successful but login failed' });
-      }
-      // Explicitly save session before responding
-      req.session.save((saveErr) => {
-        if (saveErr) {
-          console.error('Session save error after registration:', saveErr);
-          return res.status(500).json({ error: 'Registration successful but session save failed' });
-        }
-        res.status(201).json({ user: sanitizeUser(newUser) });
-      });
-    });
+    // Auto-login after registration
+    try {
+      await regen(req);
+      req.session.userId = newUser.id;
+      await save(req);
+      res.status(201).json({ user: sanitizeUser(newUser) });
+    } catch (sessionError) {
+      console.error('Session error after registration:', sessionError);
+      return res.status(500).json({ error: 'Registration successful but session setup failed' });
+    }
 
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -162,75 +157,78 @@ router.post('/register', authLimiter, async (req, res) => {
 });
 
 // Helper functions for promisified session operations
-const regen = (req: any) => promisify(req.session.regenerate).call(req.session);
-const save = (req: any) => promisify(req.session.save).call(req.session);
-const destroy = (req: any) => promisify(req.session.destroy).call(req.session);
+const regen = (req: express.Request) => new Promise<void>((res, rej) => req.session.regenerate(err => err ? rej(err) : res()));
+const save = (req: express.Request) => new Promise<void>((res, rej) => req.session.save(err => err ? rej(err) : res()));
 
 // POST /api/auth/login
 router.post('/login', authLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body ?? {};
-    if (!email || !password) return res.status(400).json({ message: "Email & password required" });
+    const validatedData = loginSchema.parse(req.body);
+    const { email, password } = validatedData;
 
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user || !user.password) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     await regen(req);
-
-    req.session.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      username: user.username,
-      phone: user.phone,
-      isAdmin: user.isAdmin
-    };
-
-    // enforce cookie flags
-    req.session.cookie.sameSite = "lax";
-    req.session.cookie.secure = process.env.NODE_ENV === "production";
-    if (process.env.COOKIE_DOMAIN) req.session.cookie.domain = process.env.COOKIE_DOMAIN;
-
+    req.session.userId = user.id;
     await save(req);
 
-    // optional explicit cookie set (helps behind proxies)
-    res.cookie(process.env.SESSION_COOKIE_NAME || "gc_sid", req.sessionID, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      domain: process.env.COOKIE_DOMAIN || undefined,
-      path: "/"
-    });
-
-    return res.json({
-      user: {
-        id: user.id, email: user.email, name: user.name,
-        username: user.username, phone: user.phone, isAdmin: user.isAdmin
-      }
-    });
-  } catch (e) {
-    console.error("Login error:", e);
+    res.json({ user: sanitizeUser(user) });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const validationError = fromZodError(error);
+      return res.status(400).json({ error: validationError.message });
+    }
+    console.error("Login error:", error);
     return res.status(500).json({ message: "Login failed" });
   }
 });
 
-// POST /api/auth/logout
-router.post('/logout', async (req, res) => {
-  const cname = process.env.SESSION_COOKIE_NAME || "gc_sid";
-  try {
-    await destroy(req);
-  } finally {
-    res.clearCookie(cname, { path: "/", domain: process.env.COOKIE_DOMAIN || undefined });
+// GET /api/auth/logout
+router.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Session destroy error:', err);
+    }
+    res.clearCookie('gc_sid', {
+      domain: '.gameschakra.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax'
+    });
     res.json({ ok: true });
-  }
+  });
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
-  return res.json({ user: req.session?.user ?? null });
+router.get('/me', async (req, res) => {
+  try {
+    // Check session userId first
+    if (req.session.userId) {
+      const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);
+      if (user) {
+        return res.json({ user: sanitizeUser(user) });
+      }
+    }
+
+    // Fall back to passport user if available
+    if (req.user) {
+      return res.json({ user: sanitizeUser(req.user as any) });
+    }
+
+    return res.json({ user: null });
+  } catch (error) {
+    console.error('Error in /me route:', error);
+    return res.json({ user: null });
+  }
 });
 
 // Google OAuth routes
@@ -251,20 +249,12 @@ router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/login?error=google_auth_failed' }),
   async (req, res) => {
     try {
-      // Set session user data manually from req.user
       if (req.user) {
         const user = req.user as any;
-        req.session.user = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          username: user.username,
-          phone: user.phone,
-          isAdmin: user.isAdmin
-        };
+        await regen(req);
+        req.session.userId = user.id;
+        await save(req);
       }
-
-      await save(req);
       return res.redirect('/');
     } catch (err) {
       console.error('Google OAuth callback error:', err);
@@ -282,20 +272,12 @@ router.post('/apple/callback',
   passport.authenticate('apple', { failureRedirect: '/login?error=apple_auth_failed' }),
   async (req, res) => {
     try {
-      // Set session user data manually from req.user
       if (req.user) {
         const user = req.user as any;
-        req.session.user = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          username: user.username,
-          phone: user.phone,
-          isAdmin: user.isAdmin
-        };
+        await regen(req);
+        req.session.userId = user.id;
+        await save(req);
       }
-
-      await save(req);
       return res.redirect('/');
     } catch (err) {
       console.error('Apple OAuth callback error:', err);
@@ -307,17 +289,22 @@ router.post('/apple/callback',
 // Apple can also use GET for callbacks in some cases
 router.get('/apple/callback',
   passport.authenticate('apple', { failureRedirect: '/login?error=apple_auth_failed' }),
-  (req, res) => {
-    // Successful authentication - save session before redirect
-    const redirectUrl = req.session?.returnTo || '/?auth=success';
-    delete req.session?.returnTo;
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error after Apple auth (GET):', err);
-        return res.redirect('/login?error=session_save_failed');
+  async (req, res) => {
+    try {
+      if (req.user) {
+        const user = req.user as any;
+        await regen(req);
+        req.session.userId = user.id;
+        await save(req);
       }
+      const redirectUrl = req.session?.returnTo || '/?auth=success';
+      delete req.session?.returnTo;
+      await save(req);
       res.redirect(redirectUrl);
-    });
+    } catch (err) {
+      console.error('Session save error after Apple auth (GET):', err);
+      return res.redirect('/login?error=session_save_failed');
+    }
   }
 );
 

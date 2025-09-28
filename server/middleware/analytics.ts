@@ -170,15 +170,15 @@ function generateVisitorId(req: Request, res: Response): string {
 }
 
 function generateSessionId(req: Request, res: Response): string {
-  // Check for existing session ID cookie
-  let sessionId = req.cookies?.['gc_sid'];
-  
+  // Check for existing analytics session ID cookie
+  let sessionId = req.cookies?.['gc_asid'];
+
   if (!sessionId) {
-    // Generate new session ID
+    // Generate new analytics session ID
     sessionId = uuidv4();
-    
+
     // Set cookie for 30 minutes sliding window
-    res.cookie('gc_sid', sessionId, {
+    res.cookie('gc_asid', sessionId, {
       maxAge: 30 * 60 * 1000, // 30 minutes
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -186,14 +186,14 @@ function generateSessionId(req: Request, res: Response): string {
     });
   } else {
     // Refresh session cookie expiry
-    res.cookie('gc_sid', sessionId, {
+    res.cookie('gc_asid', sessionId, {
       maxAge: 30 * 60 * 1000, // 30 minutes
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax'
     });
   }
-  
+
   return sessionId;
 }
 
@@ -235,14 +235,14 @@ export function analyticsTracker(req: Request, res: Response, next: NextFunction
                    ?? (req as any).session?.visitorId
                    ?? randomFallbackId();
     
-    const sessionId = req.cookies?.gc_sid
-                   ?? cookies['gc_sid'] 
+    const sessionId = req.cookies?.gc_asid
+                   ?? cookies['gc_asid']
                    ?? (req as any).session?.sessionId
                    ?? randomFallbackId();
 
     // Warn if cookies were missing
     if (!req.cookies?.gc_vid && !cookies['gc_vid'] && !(req as any).session?.visitorId) {
-      console.warn('[analytics] missing visitor/session cookie; using fallback', {
+      console.warn('[analytics] missing visitor cookie; using fallback', {
         path: req.path,
         ua: (req.headers['user-agent'] || '').slice(0, 120),
       });
@@ -314,14 +314,14 @@ export function logPlayEvent(eventType: 'play_start' | 'play_end', gameId: numbe
                    ?? gcVid
                    ?? randomFallbackId();
     
-    const sessionId = req.cookies?.gc_sid
-                   ?? cookies['gc_sid'] 
+    const sessionId = req.cookies?.gc_asid
+                   ?? cookies['gc_asid']
                    ?? (req as any).session?.sessionId
                    ?? randomFallbackId();
 
     // Warn if cookies were missing
     if (!req.cookies?.gc_vid && !cookies['gc_vid'] && !(req as any).session?.visitorId && !gcVid) {
-      console.warn('[analytics] missing visitor/session cookie; using fallback', {
+      console.warn('[analytics] missing visitor cookie; using fallback', {
         path: req.path,
         ua: (req.headers['user-agent'] || '').slice(0, 120),
       });
