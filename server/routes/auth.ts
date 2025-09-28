@@ -299,10 +299,8 @@ router.post('/apple/callback',
       return res.redirect('/');
     } catch (err) {
       console.error('Apple OAuth callback error:', err);
-        return res.redirect('/login?error=session_save_failed');
-      }
-      res.redirect(redirectUrl);
-    });
+      return res.redirect('/login?error=session_save_failed');
+    }
   }
 );
 
