@@ -436,7 +436,11 @@ export default function Dashboard() {
     );
   }
 
-  if (!user || !user.isAdmin) {
+  if (!user) {
+    return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+  }
+
+  if (!user.isAdmin) {
     return <Redirect to="/" />;
   }
 

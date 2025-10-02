@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Redirect } from "wouter";
 import { AnalyticsCard } from "@/components/analytics/AnalyticsCard";
 import { ChartCard } from "@/components/analytics/ChartCard";
 import {
@@ -92,7 +92,7 @@ export default function AnalyticsDashboard() {
 }
 
 function AnalyticsDashboardInner() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(subDays(new Date(), 6)), // Last 7 days
     to: endOfDay(new Date())
@@ -196,14 +196,15 @@ function AnalyticsDashboardInner() {
 
   const isLoading = summaryLoading || timeseriesLoading || topGamesLoading || deviceLoading || referrerLoading;
 
-  useEffect(() => {
-    if (!userLoading && (!user || !user.isAdmin)) {
-      navigate('/login');
-    }
-  }, [user, userLoading, navigate]);
-
   if (userLoading) return <DashboardSkeleton />;
-  if (!user || !user.isAdmin) return null; // Will redirect in useEffect
+
+  if (!user) {
+    return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+  }
+
+  if (!user.isAdmin) {
+    return <Redirect to="/" />;
+  }
   if (isLoading) return <DashboardSkeleton />;
   if (!summary || (summary.visits === 0 && summary.gameStarts === 0)) {
     return <EmptyAnalyticsState onRefresh={() => window.location.reload()} />;

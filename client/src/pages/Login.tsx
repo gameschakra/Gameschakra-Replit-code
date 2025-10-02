@@ -59,7 +59,7 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   // Check for auth errors in URL params
   useEffect(() => {
@@ -98,15 +98,10 @@ export default function Login() {
   
   // Redirect if already logged in
   useEffect(() => {
-    if (user && isAuthenticated) {
-      // Redirect admin users to admin dashboard, others to home
-      if (user.isAdmin) {
-        navigate("/admin");
-      } else {
-        navigate("/");
-      }
+    if (!authLoading && user) {
+      navigate(user.isAdmin ? "/admin" : "/", { replace: true });
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -138,8 +133,13 @@ export default function Login() {
     try {
       const user = await login(values.email, values.password);
 
-      // Navigate immediately - AuthProvider already shows success toast
-      navigate(user?.isAdmin ? "/admin" : "/", { replace: true });
+      // Compute redirect destination
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectParam = urlParams.get('redirect');
+      const next = user?.isAdmin ? "/admin" : (redirectParam || "/");
+
+      // Hard redirect to avoid SPA routing race conditions
+      window.location.assign(next);
     } catch (error: any) {
       console.error("Login submission error:", error);
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Game, Category, User } from "@/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Redirect, Link } from "wouter";
+import { Redirect, Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 
 export default function Admin() {
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("games");
   const [gameFile, setGameFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -246,7 +247,11 @@ export default function Admin() {
     );
   }
 
-  if (!user || !user.isAdmin) {
+  if (!user) {
+    return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+  }
+
+  if (!user.isAdmin) {
     return <Redirect to="/" />;
   }
 
