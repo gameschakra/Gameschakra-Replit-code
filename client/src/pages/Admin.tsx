@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("games");
@@ -43,10 +44,8 @@ export default function Admin() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const { toast } = useToast();
 
-  // Get user info to check if admin
-  const { data: user, isLoading: userLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
-  });
+  // Get user info from AuthProvider
+  const { user, isLoading: userLoading } = useAuth();
 
   // Get all games for management
   const { data: games, isLoading: gamesLoading } = useQuery<Game[]>({
@@ -236,7 +235,7 @@ export default function Admin() {
     }
   };
 
-  // Check if user is an admin
+  // Check if user is an admin - wait for loading to complete
   if (userLoading) {
     return (
       <div className="container mx-auto px-4 py-10">

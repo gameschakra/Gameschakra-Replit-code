@@ -137,23 +137,12 @@ export default function Login() {
     setIsLoading(true);
     try {
       const user = await login(values.email, values.password);
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-      
-      // Small delay to ensure auth state updates, then redirect
-      setTimeout(() => {
-        if (user.isAdmin) {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
-      }, 100);
+
+      // Navigate immediately - AuthProvider already shows success toast
+      navigate(user?.isAdmin ? "/admin" : "/", { replace: true });
     } catch (error: any) {
       console.error("Login submission error:", error);
-      
+
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again",
