@@ -23,7 +23,9 @@ const BlogPostPage: React.FC = () => {
   } = useQuery<BlogPost>({
     queryKey: ['/api/blog/posts', slug],
     queryFn: async () => {
-      const response = await fetch(`/api/blog/posts/${slug}`);
+      const response = await fetch(`/api/blog/posts/${slug}`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch blog post');
       }
@@ -38,7 +40,9 @@ const BlogPostPage: React.FC = () => {
   } = useQuery<BlogPost[]>({
     queryKey: ['/api/blog/posts/related', slug],
     queryFn: async () => {
-      const response = await fetch(`/api/blog/posts/related/${slug}?limit=3`);
+      const response = await fetch(`/api/blog/posts/related/${slug}?limit=3`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch related posts');
       }
@@ -50,7 +54,10 @@ const BlogPostPage: React.FC = () => {
   // Record view count
   useEffect(() => {
     if (slug && post) {
-      fetch(`/api/blog/posts/${slug}/view`, { method: 'POST' }).catch(console.error);
+      fetch(`/api/blog/posts/${slug}/view`, {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(console.error);
     }
   }, [slug, post]);
   

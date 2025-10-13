@@ -151,7 +151,8 @@ export default function ChallengePage({ params }: { params: { slug: string } }) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
       
       if (!response.ok) {

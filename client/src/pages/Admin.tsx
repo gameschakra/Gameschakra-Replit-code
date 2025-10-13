@@ -65,6 +65,7 @@ export default function Admin() {
     mutationFn: async (formData: FormData) => {
       const response = await fetch("/api/games", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
       if (!response.ok) {

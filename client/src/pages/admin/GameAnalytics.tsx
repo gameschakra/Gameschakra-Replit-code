@@ -64,7 +64,9 @@ export default function GameAnalytics() {
   const { data: analyticsData, isLoading: isAnalyticsLoading } = useQuery({
     queryKey: [`/api/analytics/games/${gameId}`, startDate, endDate],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/games/${gameId}?startDate=${startDate}&endDate=${endDate}`);
+      const res = await fetch(`/api/analytics/games/${gameId}?startDate=${startDate}&endDate=${endDate}`, {
+        credentials: 'include'
+      });
       if (!res.ok) throw new Error("Failed to fetch game analytics data");
       return res.json();
     },

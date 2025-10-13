@@ -72,6 +72,7 @@ export function useRecentlyPlayed() {
         const response = await fetch('/api/game-plays', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ gameId: game.gameId }),
         });
         
@@ -145,6 +146,7 @@ export function useRecentlyPlayed() {
       if (user) {
         const response = await fetch('/api/recently-played', {
           method: 'DELETE',
+          credentials: 'include',
         });
         
         if (!response.ok) {
