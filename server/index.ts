@@ -88,8 +88,14 @@ app.use((req, res, next) => {
     if (allowedOrigins.length === 0) {
       console.warn('[CORS] WARNING: No allowed origins configured for production! Set CORS_ORIGIN environment variable.');
     }
-    
-    if (origin && allowedOrigins.includes(origin)) {
+
+    // Handle same-origin requests (no Origin header) OR allowed origins
+    if (!origin) {
+      // Same-origin request (browser doesn't send Origin header)
+      const effectiveOrigin = allowedOrigins[0] || 'https://gameschakra.com';
+      res.setHeader('Access-Control-Allow-Origin', effectiveOrigin);
+      console.log(`[CORS] Same-origin request (no Origin header), using: ${effectiveOrigin}`);
+    } else if (allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       console.log(`[CORS] Allowed origin: ${origin}`);
     } else {

@@ -43,17 +43,25 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 }
 
 // Middleware to check if user is an admin
-export function isAdmin(req: Request, res: Response, next: NextFunction) {
+export async function isAdmin(req: Request, res: Response, next: NextFunction) {
   const isProd = process.env.NODE_ENV === 'production';
-  
+
   console.log('isAdmin middleware - auth check:', {
-    isAuthenticated: req.isAuthenticated(), 
+    isAuthenticated: req.isAuthenticated(),
     user: req.user ? `User: ${(req.user as any).id}` : 'No user',
-    headers: req.headers.cookie, 
+    sessionUserId: (req.session as any)?.userId,
+    adminToken: (req as any).adminTokenAuth,
+    headers: req.headers.cookie,
     session: req.session || 'No session',
     devBypass: !isProd && process.env.ADMIN_DEV_BYPASS === '1'
   });
-  
+
+  // Check for admin token bypass (for API access)
+  if ((req as any).adminTokenAuth) {
+    console.log('isAdmin middleware - admin token auth - granting access');
+    return next();
+  }
+
   // Development admin bypass - ONLY in development
   if (!isProd && process.env.ADMIN_DEV_BYPASS === '1') {
     console.log('isAdmin middleware - DEV BYPASS ENABLED - granting admin access');
@@ -61,19 +69,43 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
     (req as any).user = { id: 'dev-admin', username: 'dev-admin', isAdmin: true };
     return next();
   }
-  
-  // Production authentication flow
-  if (!req.isAuthenticated()) {
-    console.log('isAdmin middleware - not authenticated');
+
+  // Check both passport authentication AND session.userId
+  const sessionUserId = (req.session as any)?.userId;
+
+  if (!req.isAuthenticated() && !sessionUserId) {
+    console.log('isAdmin middleware - not authenticated (no passport user or session userId)');
     return res.status(401).json({ message: 'Authentication required' });
   }
-  
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user.isAdmin) {
+
+  // If we have session.userId but no req.user, load the user
+  let user = req.user as any;
+  if (!user && sessionUserId) {
+    try {
+      const { db } = await import('../db');
+      const { users } = await import('../../shared/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const [dbUser] = await db.select().from(users).where(eq(users.id, sessionUserId)).limit(1);
+      if (dbUser) {
+        user = dbUser;
+        req.user = dbUser;
+      }
+    } catch (err) {
+      console.error('isAdmin middleware - failed to load user from session:', err);
+    }
+  }
+
+  if (!user) {
+    console.log('isAdmin middleware - user not found');
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  if (!user.isAdmin) {
     console.log('isAdmin middleware - not admin user');
     return res.status(403).json({ message: 'Admin access required' });
   }
-  
+
   console.log('isAdmin middleware - admin access granted');
   return next();
 }

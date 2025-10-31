@@ -191,39 +191,59 @@ router.post('/login', authLimiter, async (req, res) => {
   }
 });
 
-// GET /api/auth/logout
-router.get('/logout', (req, res) => {
+// POST /api/auth/logout - properly destroy session and clear cookie
+router.post('/logout', (req, res) => {
+  const sessionName = process.env.SESSION_NAME || 'gc_sid';
+
   req.session.destroy((err) => {
     if (err) {
       console.error('Session destroy error:', err);
+      return res.status(500).json({ error: 'Failed to logout' });
     }
-    res.clearCookie('gc_sid', {
-      domain: '.gameschakra.com',
+
+    // Clear cookie with environment-based configuration
+    res.clearCookie(sessionName, {
+      domain: process.env.COOKIE_DOMAIN || undefined,
       path: '/',
       httpOnly: true,
-      secure: true,
-      sameSite: 'lax'
+      secure: process.env.SECURE_COOKIES === 'true',
+      sameSite: (process.env.SAME_SITE_COOKIES as 'lax' | 'strict' | 'none') || 'lax'
     });
-    res.json({ ok: true });
+
+    res.status(200).json({ message: 'Logged out successfully' });
   });
 });
 
-// GET /api/auth/me
+// GET /api/auth/me - reliably return user session
 router.get('/me', async (req, res) => {
   try {
-    // Check session userId first
-    if (req.session.userId) {
-      const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);
+    console.log('/api/auth/me called:', {
+      hasPassportUser: !!req.user,
+      sessionUserId: (req.session as any)?.userId,
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID
+    });
+
+    // Priority 1: Check session.userId (for local login and OAuth)
+    const sessionUserId = (req.session as any)?.userId;
+    if (sessionUserId) {
+      const [user] = await db.select().from(users).where(eq(users.id, sessionUserId)).limit(1);
       if (user) {
+        console.log('/api/auth/me - found user from session.userId:', user.id);
         return res.json({ user: sanitizeUser(user) });
       }
     }
 
-    // Fall back to passport user if available
+    // Priority 2: Check Passport user (fallback for OAuth if not in session yet)
     if (req.user) {
+      console.log('/api/auth/me - found user from passport:', (req.user as any).id);
+      // Sync session.userId for future requests
+      (req.session as any).userId = (req.user as any).id;
+      await save(req);
       return res.json({ user: sanitizeUser(req.user as any) });
     }
 
+    console.log('/api/auth/me - no user found, returning null');
     return res.json({ user: null });
   } catch (error) {
     console.error('Error in /me route:', error);
