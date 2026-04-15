@@ -122,43 +122,40 @@ router.post('/register', authLimiter, async (req, res) => {
       country,
     }).returning();
 
-    // Auto-login after registration
-    try {
-      await regen(req);
-      req.session.userId = newUser.id;
-      await save(req);
-      res.status(201).json({ user: sanitizeUser(newUser) });
-    } catch (sessionError) {
-      console.error('Session error after registration:', sessionError);
-      return res.status(500).json({ error: 'Registration successful but session setup failed' });
-    }
+    // Auto-login after registration using Passport + session
+    await login(req, newUser);
+    req.session.userId = newUser.id;
+    await save(req);
+
+    return res.status(201).json({ user: sanitizeUser(newUser) });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = fromZodError(error);
       return res.status(400).json({ error: validationError.message });
     }
-    
+
     // Handle database constraint violations
-    if (error.code === '23505') { // PostgreSQL unique constraint violation
-      console.error('Unique constraint violation:', error.detail);
-      if (error.detail?.includes('phone')) {
+    if ((error as any).code === '23505') { // PostgreSQL unique constraint violation
+      console.error('Unique constraint violation:', (error as any).detail);
+      if ((error as any).detail?.includes('phone')) {
         return res.status(409).json({ error: 'Phone number already registered with another account' });
-      } else if (error.detail?.includes('email')) {
+      } else if ((error as any).detail?.includes('email')) {
         return res.status(409).json({ error: 'User already exists with this email' });
-      } else if (error.detail?.includes('username')) {
+      } else if ((error as any).detail?.includes('username')) {
         return res.status(409).json({ error: 'Username already taken. Please choose a different username.' });
       }
     }
-    
+
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    return res.status(500).json({ error: 'Registration failed' });
   }
 });
 
 // Helper functions for promisified session operations
 const regen = (req: express.Request) => new Promise<void>((res, rej) => req.session.regenerate(err => err ? rej(err) : res()));
 const save = (req: express.Request) => new Promise<void>((res, rej) => req.session.save(err => err ? rej(err) : res()));
+const login = (req: express.Request, user: any) => new Promise<void>((res, rej) => req.login(user, err => err ? rej(err) : res()));
 
 // POST /api/auth/login
 router.post('/login', authLimiter, async (req, res) => {
