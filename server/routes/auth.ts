@@ -123,6 +123,8 @@ router.post('/register', authLimiter, async (req, res) => {
     }).returning();
 
     // Auto-login after registration using Passport + session
+    // regen prevents session fixation, login sets req.session.passport.user via serializeUser
+    await regen(req);
     await login(req, newUser);
     req.session.userId = newUser.id;
     await save(req);
@@ -173,11 +175,15 @@ router.post('/login', authLimiter, async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // Regenerate session first (prevent session fixation), then use Passport login
+    // so that serializeUser runs and req.session.passport.user is set.
+    // Also set req.session.userId as fallback for the dual-check in isAuthenticated middleware.
     await regen(req);
+    await login(req, user);
     req.session.userId = user.id;
     await save(req);
 
-    res.json({ user: sanitizeUser(user) });
+    return res.json({ user: sanitizeUser(user) });
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = fromZodError(error);
