@@ -37,7 +37,14 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     console.log('isAuthenticated middleware - AUTHENTICATED, user:', req.user);
     return next();
   }
-  
+
+  // Fallback: check session.userId (set by local login which bypasses passport.login())
+  const sessionUserId = (req.session as any)?.userId;
+  if (sessionUserId) {
+    console.log('isAuthenticated middleware - AUTHENTICATED via session.userId:', sessionUserId);
+    return next();
+  }
+
   console.log('isAuthenticated middleware - NOT authenticated');
   res.status(401).json({ message: 'Authentication required' });
 }
