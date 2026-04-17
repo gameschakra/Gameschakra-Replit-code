@@ -64,8 +64,8 @@ export async function apiRequest<T = any>(
   // Extract session cookie specifically  
   const sessionCookie = document.cookie
     .split(';')
-    .find(cookie => cookie.trim().startsWith('gc_sid='));
-  console.log(`[API Call] Session cookie (gc_sid): ${sessionCookie || 'NOT FOUND'}`);
+    .find(cookie => cookie.trim().startsWith('gc_session='));
+  console.log(`[API Call] Session cookie (gc_session): ${sessionCookie || 'NOT FOUND'}`);
   
   // Detect if we're in localhost development environment
   const isLocalDevelopment = window.location.hostname === 'localhost' || 

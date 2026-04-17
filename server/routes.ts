@@ -70,7 +70,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   });
 
   const sessionMiddleware = session({
-    name: "gc_sid",
+    name: process.env.SESSION_NAME || "gc_session",
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,

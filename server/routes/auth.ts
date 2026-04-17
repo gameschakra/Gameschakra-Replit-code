@@ -206,7 +206,7 @@ router.post('/login', authLimiter, async (req, res) => {
 
 // POST /api/auth/logout - properly destroy session and clear cookie
 router.post('/logout', (req, res) => {
-  const sessionName = process.env.SESSION_NAME || 'gc_sid';
+  const sessionName = process.env.SESSION_NAME || 'gc_session';
 
   req.session.destroy((err) => {
     if (err) {

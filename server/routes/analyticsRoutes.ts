@@ -76,8 +76,8 @@ function getVisitorSessionIds(req: Request): { visitorId: string, sessionId: str
                  ?? (req as any).session?.visitorId
                  ?? randomFallbackId();
   
-  const sessionId = req.cookies?.gc_sid
-                 ?? req.headers['x-session-id'] as string  
+  const sessionId = req.cookies?.gc_visitor
+                 ?? req.headers['x-session-id'] as string
                  ?? (req as any).session?.sessionId
                  ?? randomFallbackId();
                  
