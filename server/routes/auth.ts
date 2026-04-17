@@ -122,20 +122,32 @@ router.post('/register', authLimiter, async (req, res) => {
       country,
     }).returning();
 
-    // Auto-login after registration using Passport
-    // req.login() triggers serializeUser → stores user.id in req.session.passport.user
-    // req.session.userId is kept as fallback for isAuthenticated dual-check (see CLAUDE.md)
-    await login(req, newUser);
-    req.session.userId = newUser.id;
-    await save(req);
+    // Use Passport req.login() to properly serialize user into session.
+    // Callback style (not promisified) ensures response is sent inside the
+    // callback, preventing any "headers already sent" race conditions.
+    // req.session.userId kept as fallback for isAuthenticated dual-check (see CLAUDE.md)
+    req.login(newUser, (loginErr) => {
+      if (loginErr) {
+        console.error('[Register] req.login error:', loginErr);
+        return res.status(500).json({ error: 'Login failed after registration' });
+      }
 
-    console.log('[Register] Session after login:', {
-      sessionID: req.sessionID,
-      passportUser: (req.session as any)?.passport?.user,
-      userId: (req.session as any)?.userId,
+      req.session.userId = newUser.id;
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('[Register] session.save error:', saveErr);
+          return res.status(500).json({ error: 'Session save failed' });
+        }
+
+        console.log('[Register] Session saved:', {
+          sessionID: req.sessionID,
+          passportUser: (req.session as any)?.passport?.user,
+          userId: (req.session as any)?.userId,
+        });
+
+        return res.status(201).json({ user: sanitizeUser(newUser) });
+      });
     });
-
-    return res.status(201).json({ user: sanitizeUser(newUser) });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -166,42 +178,53 @@ const save = (req: express.Request) => new Promise<void>((res, rej) => req.sessi
 const login = (req: express.Request, user: any) => new Promise<void>((res, rej) => req.login(user, err => err ? rej(err) : res()));
 
 // POST /api/auth/login
-router.post('/login', authLimiter, async (req, res) => {
+// Uses passport.authenticate("local", callback) so Passport's full session
+// pipeline runs (serializeUser → session save) before response is sent.
+router.post('/login', authLimiter, (req, res, next) => {
+  // Validate input before handing off to Passport
   try {
-    const validatedData = loginSchema.parse(req.body);
-    const { email, password } = validatedData;
-
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (!user || !user.password) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Use Passport login so serializeUser runs and req.session.passport.user is set.
-    // req.session.userId is kept as fallback for isAuthenticated dual-check (see CLAUDE.md)
-    await login(req, user);
-    req.session.userId = user.id;
-    await save(req);
-
-    console.log('[Login] Session after login:', {
-      sessionID: req.sessionID,
-      passportUser: (req.session as any)?.passport?.user,
-      userId: (req.session as any)?.userId,
-    });
-
-    return res.json({ user: sanitizeUser(user) });
+    loginSchema.parse(req.body);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = fromZodError(error);
       return res.status(400).json({ error: validationError.message });
     }
-    console.error("Login error:", error);
-    return res.status(500).json({ message: "Login failed" });
+    return res.status(400).json({ error: 'Invalid input' });
   }
+
+  passport.authenticate('local', (err: any, user: any, info: any) => {
+    if (err) {
+      console.error('[Login] Passport error:', err);
+      return next(err);
+    }
+    if (!user) {
+      return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+    }
+
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        console.error('[Login] req.login error:', loginErr);
+        return res.status(500).json({ error: 'Login failed' });
+      }
+
+      // Set userId fallback for isAuthenticated dual-check (see CLAUDE.md)
+      req.session.userId = user.id;
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('[Login] session.save error:', saveErr);
+          return res.status(500).json({ error: 'Session save failed' });
+        }
+
+        console.log('[Login] Session saved:', {
+          sessionID: req.sessionID,
+          passportUser: (req.session as any)?.passport?.user,
+          userId: (req.session as any)?.userId,
+        });
+
+        return res.json({ user: sanitizeUser(user) });
+      });
+    });
+  })(req, res, next);
 });
 
 // POST /api/auth/logout - properly destroy session and clear cookie
@@ -230,12 +253,11 @@ router.post('/logout', (req, res) => {
 // GET /api/auth/me - reliably return user session
 router.get('/me', async (req, res) => {
   try {
-    console.log('[/api/auth/me] called:', {
+    console.log('SESSION DEBUG:', {
       sessionID: req.sessionID,
       isAuthenticated: req.isAuthenticated(),
-      passportUser: (req.session as any)?.passport?.user,
-      sessionUserId: (req.session as any)?.userId,
-      hasReqUser: !!req.user,
+      passportUser: req.user,
+      sessionData: req.session,
     });
 
     // Priority 1: Check session.userId (for local login and OAuth)

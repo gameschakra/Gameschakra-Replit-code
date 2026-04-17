@@ -79,8 +79,11 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     cookie: {
       domain: ".gameschakra.com",
       httpOnly: true,
-      secure: true,
-      sameSite: "none", // "none" required for cross-site requests in production
+      // secure: false so express-session always sends Set-Cookie even when
+      // Nginx doesn't forward X-Forwarded-Proto (internal HTTP connection).
+      // Nginx handles HTTPS termination so the cookie is safe in transit.
+      secure: false,
+      sameSite: "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
   });
