@@ -80,7 +80,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       domain: ".gameschakra.com",
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none", // "none" required for cross-site requests in production
       maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
   });

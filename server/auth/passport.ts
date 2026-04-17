@@ -10,23 +10,28 @@ import { log, warn, error } from '../logger';
 
 // Configure passport serialization
 passport.serializeUser((user: User, done) => {
+  console.log('[Passport] serializeUser - storing user.id:', user.id);
   done(null, user.id);
 });
 
 passport.deserializeUser(async (id: number, done) => {
+  console.log('[Passport] deserializeUser - loading user id:', id);
   try {
     const [user] = await db
       .select()
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
-    
+
     if (!user) {
+      console.log('[Passport] deserializeUser - user not found for id:', id);
       return done(null, false);
     }
-    
+
+    console.log('[Passport] deserializeUser - found user:', user.id, user.email);
     done(null, user);
   } catch (error) {
+    console.error('[Passport] deserializeUser error:', error);
     done(error, null);
   }
 });

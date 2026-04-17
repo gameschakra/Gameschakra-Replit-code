@@ -122,12 +122,18 @@ router.post('/register', authLimiter, async (req, res) => {
       country,
     }).returning();
 
-    // Auto-login after registration using Passport + session
-    // regen prevents session fixation, login sets req.session.passport.user via serializeUser
-    await regen(req);
+    // Auto-login after registration using Passport
+    // req.login() triggers serializeUser → stores user.id in req.session.passport.user
+    // req.session.userId is kept as fallback for isAuthenticated dual-check (see CLAUDE.md)
     await login(req, newUser);
     req.session.userId = newUser.id;
     await save(req);
+
+    console.log('[Register] Session after login:', {
+      sessionID: req.sessionID,
+      passportUser: (req.session as any)?.passport?.user,
+      userId: (req.session as any)?.userId,
+    });
 
     return res.status(201).json({ user: sanitizeUser(newUser) });
 
@@ -175,13 +181,17 @@ router.post('/login', authLimiter, async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Regenerate session first (prevent session fixation), then use Passport login
-    // so that serializeUser runs and req.session.passport.user is set.
-    // Also set req.session.userId as fallback for the dual-check in isAuthenticated middleware.
-    await regen(req);
+    // Use Passport login so serializeUser runs and req.session.passport.user is set.
+    // req.session.userId is kept as fallback for isAuthenticated dual-check (see CLAUDE.md)
     await login(req, user);
     req.session.userId = user.id;
     await save(req);
+
+    console.log('[Login] Session after login:', {
+      sessionID: req.sessionID,
+      passportUser: (req.session as any)?.passport?.user,
+      userId: (req.session as any)?.userId,
+    });
 
     return res.json({ user: sanitizeUser(user) });
   } catch (error) {
@@ -220,11 +230,12 @@ router.post('/logout', (req, res) => {
 // GET /api/auth/me - reliably return user session
 router.get('/me', async (req, res) => {
   try {
-    console.log('/api/auth/me called:', {
-      hasPassportUser: !!req.user,
-      sessionUserId: (req.session as any)?.userId,
+    console.log('[/api/auth/me] called:', {
+      sessionID: req.sessionID,
       isAuthenticated: req.isAuthenticated(),
-      sessionID: req.sessionID
+      passportUser: (req.session as any)?.passport?.user,
+      sessionUserId: (req.session as any)?.userId,
+      hasReqUser: !!req.user,
     });
 
     // Priority 1: Check session.userId (for local login and OAuth)
