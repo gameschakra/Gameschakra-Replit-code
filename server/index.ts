@@ -67,13 +67,6 @@ app.use((req, res, next) => {
   console.log(`[CORS] Request from ${req.headers.origin || 'unknown origin'} to ${req.method} ${req.path}`);
   console.log(`[CORS] Request cookies: ${req.headers.cookie || 'no cookies'}`);
   
-  // Check for admin token header (secure in production)
-  const adminToken = process.env.ADMIN_TOKEN || 'admin123';
-  if (req.headers['x-admin-token'] === adminToken) {
-    console.log('[Auth Bypass] Admin token detected, bypassing normal auth');
-    (req as any).adminTokenAuth = true;
-  }
-  
   // SECURE CORS Configuration
   const origin = req.headers.origin;
   // Production origins should be set via CORS_ORIGIN environment variable
@@ -115,7 +108,7 @@ app.use((req, res, next) => {
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, X-Admin-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie, Content-Disposition');
   

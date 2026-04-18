@@ -27,12 +27,8 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
       id: req.sessionID,
       cookie: req.session.cookie
     } : 'No session',
-    adminToken: req.headers['x-admin-token'] ? 'Present' : 'Not present'
   });
-  
-  // Remove hardcoded admin token bypass for security
-  // Admin token should only be used for specific admin operations, not general auth bypass
-  
+
   if (req.isAuthenticated()) {
     console.log('isAuthenticated middleware - AUTHENTICATED, user:', req.user);
     return next();
@@ -51,31 +47,12 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 
 // Middleware to check if user is an admin
 export async function isAdmin(req: Request, res: Response, next: NextFunction) {
-  const isProd = process.env.NODE_ENV === 'production';
-
   console.log('isAdmin middleware - auth check:', {
     isAuthenticated: req.isAuthenticated(),
     user: req.user ? `User: ${(req.user as any).id}` : 'No user',
     sessionUserId: (req.session as any)?.userId,
-    adminToken: (req as any).adminTokenAuth,
     headers: req.headers.cookie,
-    session: req.session || 'No session',
-    devBypass: !isProd && process.env.ADMIN_DEV_BYPASS === '1'
   });
-
-  // Check for admin token bypass (for API access)
-  if ((req as any).adminTokenAuth) {
-    console.log('isAdmin middleware - admin token auth - granting access');
-    return next();
-  }
-
-  // Development admin bypass - ONLY in development
-  if (!isProd && process.env.ADMIN_DEV_BYPASS === '1') {
-    console.log('isAdmin middleware - DEV BYPASS ENABLED - granting admin access');
-    // Create mock admin user for development
-    (req as any).user = { id: 'dev-admin', username: 'dev-admin', isAdmin: true };
-    return next();
-  }
 
   // Check both passport authentication AND session.userId
   const sessionUserId = (req.session as any)?.userId;
