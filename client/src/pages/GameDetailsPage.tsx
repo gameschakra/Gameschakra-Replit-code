@@ -150,14 +150,12 @@ export default function GameDetailsPage() {
     };
   }, [game]);
 
-  // Handle play game - navigate immediately and track in background
+  // Handle play game - show iframe in-place and track in background
   const handlePlayGame = async () => {
     if (!game) return;
 
-    // Navigate immediately to game using /play/ route
-    if (game.slug) {
-      window.location.href = toPlay(game.slug);
-    }
+    // Show the game iframe inline (within GameDetailsPage layout)
+    setShowPlayButton(false);
 
     // Track play in background (best effort, don't block navigation)
     try {

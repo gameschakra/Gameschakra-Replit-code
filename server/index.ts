@@ -192,7 +192,21 @@ app.use((req, res, next) => {
     // Production static file serving - NO vite imports
     const root = process.cwd();
 
-    // Mount uploads explicitly
+    // Serve /uploads/* directly — must be BEFORE the SPA catch-all
+    // This handles: /uploads/thumbnails/game_N.jpg and /uploads/games/{dir}/index.html
+    app.use('/uploads', express.static(path.join(root, 'uploads'), {
+      fallthrough: true,
+      maxAge: '1d',
+      setHeaders(res, filePath) {
+        // Game HTML/JS files need cross-origin isolation headers for SharedArrayBuffer etc.
+        if (filePath.includes('/games/')) {
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        }
+      }
+    }));
+
+    // Legacy URL aliases (kept for backward compatibility)
     app.use('/images/games', express.static(path.join(root, 'uploads', 'thumbnails'), {
       fallthrough: true,
       maxAge: '7d',
