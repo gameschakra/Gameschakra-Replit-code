@@ -338,7 +338,10 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   });
 
   // Get game by slug (for public view)
-  api.get("/games/:slug([^0-9].*)", async (req: Request, res: Response) => {
+  // [^/]+ matches any single path segment (no slash) — comes after /games/:id(\d+)
+  // so pure numeric IDs still hit the numeric route above; slugs like "90-degrees"
+  // that start with a digit now match correctly.
+  api.get("/games/:slug([^/]+)", async (req: Request, res: Response) => {
     try {
       const game = await storage.getGameBySlug(req.params.slug);
       if (!game) {

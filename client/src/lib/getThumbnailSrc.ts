@@ -9,15 +9,15 @@ export function getThumbnailSrc(game: {
   thumbnailPath?: string;
   thumbnailHash?: string;
 }) {
-  // GC_FIX: Use canonical endpoint that checks uploaded thumbnails first, then fallbacks
-  const baseUrl = `/api/games/${game.id}/thumbnail`;
-  
-  // Add cache-busting timestamp for now (correctness > perf)
-  const queryParams = new URLSearchParams();
-  queryParams.append('t', String(Date.now()));
-  
-  // Return the canonical URL
-  return `${baseUrl}?${queryParams.toString()}`;
+  // If the game has a direct thumbnailUrl (e.g. /api/thumbnails/game_N_ts_hash.jpg),
+  // use it directly — it already points to the actual file and is stable per upload.
+  if (game.thumbnailUrl) {
+    return game.thumbnailUrl;
+  }
+
+  // Fallback: canonical thumbnail endpoint — stable URL, no Date.now() so it
+  // doesn't create a new browser request on every render.
+  return `/api/games/${game.id}/thumbnail`;
 }
 
 /**

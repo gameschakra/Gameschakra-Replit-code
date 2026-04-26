@@ -89,6 +89,7 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games/popular"] });
       toast({
         title: "Game uploaded successfully",
         description: "Your game is now processing and will be available soon.",

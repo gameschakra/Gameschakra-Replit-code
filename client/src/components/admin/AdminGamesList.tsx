@@ -96,6 +96,7 @@ export default function AdminGamesList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games/popular"] });
       toast({
         title: "Featured status updated",
         description: "The game featured status has been successfully updated.",
@@ -145,6 +146,7 @@ export default function AdminGamesList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games/popular"] });
       toast({
         title: "Thumbnail updated",
         description: "The game thumbnail has been successfully updated.",
