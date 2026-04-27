@@ -81,30 +81,24 @@ export async function listGames(params: ListGamesParams = {}): Promise<{ rows: G
 }
 
 // Create a new game
-export async function createGame(gameData: Omit<InsertGame, 'gameDir' | 'entryFile'>, zipBuffer: Buffer, thumbnailBuffer?: Buffer): Promise<Game> {
+// zipBuffer is optional — if not provided the game is created as a playable-pending draft
+export async function createGame(gameData: Omit<InsertGame, 'gameDir' | 'entryFile'>, zipBuffer?: Buffer, thumbnailBuffer?: Buffer): Promise<Game> {
   try {
-    console.log('Creating game with data:', JSON.stringify({
-      ...gameData,
-      zipBuffer: zipBuffer ? `Buffer(${zipBuffer.length} bytes)` : null,
-      thumbnailBuffer: thumbnailBuffer ? `Buffer(${thumbnailBuffer.length} bytes)` : null
-    }, null, 2));
+    let gameDir = '';
+    let entryFile = 'index.html';
 
-    if (!zipBuffer) {
-      console.error('Game zip file buffer is missing or invalid');
-      throw new Error('Game zip file buffer is missing or invalid');
+    if (zipBuffer) {
+      console.log('Processing game zip file...');
+      const gameResult = await fileService.processGameZip(zipBuffer);
+      if (!gameResult || !gameResult.gameDir || !gameResult.entryFile) {
+        throw new Error('Failed to process game zip file: Invalid result');
+      }
+      gameDir = gameResult.gameDir;
+      entryFile = gameResult.entryFile;
+      console.log('Game zip processed:', { gameDir, entryFile });
+    } else {
+      console.log('No ZIP provided — creating draft without game files');
     }
-
-    console.log('Processing game zip file...');
-    // Process the game zip file
-    const gameResult = await fileService.processGameZip(zipBuffer);
-
-    if (!gameResult || !gameResult.gameDir || !gameResult.entryFile) {
-      console.error('Invalid game result returned from processGameZip:', gameResult);
-      throw new Error('Failed to process game zip file: Invalid result');
-    }
-
-    const { gameDir, entryFile } = gameResult;
-    console.log('Game zip processed successfully:', { gameDir, entryFile });
 
     // Prepare the initial game data without thumbnail
     const initialGameData = {

@@ -43,7 +43,7 @@ const gameFormSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   description: z.string().optional(),
   instructions: z.string().optional(),
-  categoryId: z.string().min(1, { message: "Please select a category" }),
+  categoryId: z.string().optional(),  // optional — game can be uncategorised
   developer: z.string().optional(),
   status: z.enum(["draft", "published"]),
   isFeatured: z.boolean().default(false),
@@ -83,7 +83,7 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
   // Game upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/games", data, true);
+      const response = await apiRequest("POST", "/api/games", data, { isFormData: true });
       return response;
     },
     onSuccess: () => {
@@ -109,44 +109,34 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
 
   // Handle form submission
   const onSubmit = (values: GameFormValues) => {
-    if (!gameFile) {
-      toast({
-        title: "Missing game file",
-        description: "Please upload a ZIP file containing your game",
-        variant: "destructive",
-      });
-      return;
+    // Validate game file size only if one was selected
+    if (gameFile) {
+      const maxSizeMB = 100;
+      const fileSizeMB = gameFile.size / (1024 * 1024);
+      if (fileSizeMB > maxSizeMB) {
+        toast({
+          title: "File too large",
+          description: `ZIP file is ${fileSizeMB.toFixed(2)} MB. Maximum is ${maxSizeMB} MB.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    // Validate file size (max 100MB)
-    const maxSizeMB = 100;
-    const fileSizeMB = gameFile.size / (1024 * 1024);
-    if (fileSizeMB > maxSizeMB) {
-      toast({
-        title: "File too large",
-        description: `ZIP file is ${fileSizeMB.toFixed(2)}MB. Maximum allowed size is ${maxSizeMB}MB.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Create form data
+    // Build FormData — only include fields that have actual values
     const formData = new FormData();
-    
-    // Add form values
     formData.append("title", values.title);
-    if (values.description) formData.append("description", values.description);
-    if (values.instructions) formData.append("instructions", values.instructions);
-    formData.append("categoryId", Number(values.categoryId).toString()); // Ensure it's converted to number first
-    if (values.developer) formData.append("developer", values.developer);
+    if (values.description?.trim())   formData.append("description", values.description);
+    if (values.instructions?.trim())  formData.append("instructions", values.instructions);
+    if (values.categoryId)            formData.append("categoryId", String(Number(values.categoryId)));
+    if (values.developer?.trim())     formData.append("developer", values.developer);
     formData.append("status", values.status);
-    formData.append("isFeatured", values.isFeatured ? "true" : "false"); // Ensure proper boolean conversion
-    
-    // Add files
-    formData.append("gameFile", gameFile);
-    if (thumbnail) formData.append("thumbnail", thumbnail);
-    
-    // Submit
+    formData.append("isFeatured", values.isFeatured ? "true" : "false");
+
+    // Attach files only when selected
+    if (gameFile)   formData.append("gameFile", gameFile);
+    if (thumbnail)  formData.append("thumbnail", thumbnail);
+
     uploadMutation.mutate(formData);
   };
 
@@ -268,12 +258,12 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
                   <FormItem>
                     <FormLabel>Category</FormLabel>
                     <FormControl>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value}
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Select a category (optional)" />
                         </SelectTrigger>
                         <SelectContent>
                           {categories?.map(category => (
@@ -335,12 +325,12 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
                   </span>
                 </div>
                 <div className="text-gray-700 dark:text-gray-300 font-medium">
-                  {gameFile ? `Selected: ${gameFile.name}` : 'Upload Game ZIP File'}
+                  {gameFile ? `Selected: ${gameFile.name}` : 'Upload Game ZIP File (optional)'}
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {gameFile 
+                  {gameFile
                     ? `${(gameFile.size / (1024 * 1024)).toFixed(2)} MB - Click below to change file`
-                    : 'Drag and drop your game zip file, or click to browse'}
+                    : 'Optional — you can add the game file later via Edit'}
                 </p>
                 <div>
                   <label className="inline-block bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg cursor-pointer transition-colors">

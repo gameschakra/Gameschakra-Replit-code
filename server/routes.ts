@@ -386,62 +386,37 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      // Check if files property exists
-      if (!req.files) {
-        console.error('No files property in request');
-        return res.status(400).json({ message: "No files uploaded" });
-      }
-      
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      console.log('Uploaded files fieldnames:', Object.keys(files));
-      
-      if (!files.gameFile || !files.gameFile[0]) {
-        console.error('Game file is missing');
-        return res.status(400).json({ message: "Game file is required" });
-      }
-      
-      // Log file details
-      console.log('Game file details:', {
-        originalname: files.gameFile[0].originalname,
-        mimetype: files.gameFile[0].mimetype,
-        size: `${(files.gameFile[0].size / (1024 * 1024)).toFixed(2)} MB`,
-        hasBuffer: !!files.gameFile[0].buffer
-      });
-      
-      // Check if buffer exists and is valid
-      if (!files.gameFile[0].buffer || !(files.gameFile[0].buffer instanceof Buffer)) {
-        console.error('Game file buffer is invalid');
+      const files = (req.files || {}) as { [fieldname: string]: Express.Multer.File[] };
+      console.log('Uploaded files:', Object.keys(files));
+
+      // Extract game ZIP (optional)
+      const gameZipFile = files.gameFile?.[0];
+      if (gameZipFile && (!gameZipFile.buffer || !(gameZipFile.buffer instanceof Buffer))) {
         return res.status(400).json({ message: "Game file is corrupted" });
       }
-      
-      const gameZipBuffer = files.gameFile[0].buffer;
-      
-      // Thumbnail is optional
-      let thumbnailBuffer = undefined;
-      if (files.thumbnail && files.thumbnail[0] && files.thumbnail[0].buffer) {
-        console.log('Thumbnail file details:', {
-          originalname: files.thumbnail[0].originalname,
-          mimetype: files.thumbnail[0].mimetype,
-          size: `${(files.thumbnail[0].size / (1024 * 1024)).toFixed(2)} MB`,
-          hasBuffer: !!files.thumbnail[0].buffer
-        });
-        thumbnailBuffer = files.thumbnail[0].buffer;
+      const gameZipBuffer = gameZipFile?.buffer;
+
+      // Extract thumbnail (optional)
+      const thumbnailFile = files.thumbnail?.[0];
+      const thumbnailBuffer = (thumbnailFile?.buffer instanceof Buffer) ? thumbnailFile.buffer : undefined;
+
+      // Must provide at least a title
+      if (!req.body.title || req.body.title.trim().length < 2) {
+        return res.status(400).json({ message: "Game title is required (min 2 characters)" });
       }
-      
-      console.log('Parsing game data from request body');
-      
+
       // Parse and convert types before validation
       const parsedBody = {
         ...req.body,
         categoryId: req.body.categoryId ? Number(req.body.categoryId) : null,
         isFeatured: req.body.isFeatured === "true" || req.body.isFeatured === true || req.body.featured === "true" || req.body.featured === true,
-        // If status checkbox is checked, set status to draft, otherwise default to published
         status: req.body.status === "draft" ? "draft" : "published",
       };
-      
-      // Validate and parse game data
+
+      // Validate only the fields that are present — omit gameDir/entryFile (generated)
       const gameData = insertGameSchema
         .omit({ gameDir: true, entryFile: true })
+        .partial({ categoryId: true, description: true, instructions: true, developer: true })
         .parse(parsedBody);
       
       console.log('Creating game with parsed data');
