@@ -405,14 +405,27 @@ export default function GameUploadForm({ open, onOpenChange }: GameUploadFormPro
                 control={form.control}
                 name="isFeatured"
                 render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <Switch 
-                        checked={field.value} 
-                        onCheckedChange={field.onChange} 
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">Feature this game</FormLabel>
+                  <FormItem className="flex flex-col">
+                    <div className="flex items-center space-x-2">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            // Featured games must be published to appear on homepage
+                            if (checked) {
+                              form.setValue("status", "published");
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Feature this game</FormLabel>
+                    </div>
+                    {field.value && (
+                      <p className="text-xs text-amber-500 mt-1">
+                        Featured games are automatically published so they appear on the homepage carousel.
+                      </p>
+                    )}
                   </FormItem>
                 )}
               />
