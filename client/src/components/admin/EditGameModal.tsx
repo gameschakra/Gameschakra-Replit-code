@@ -315,7 +315,7 @@ export default function EditGameModal({ isOpen, onClose, gameId }: EditGameModal
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
               <FormField
                 control={form.control}
                 name="title"
